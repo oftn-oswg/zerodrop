@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css?family=Source+Sans+Pro');
+
+html, body {
+    background: #e6ecf0;
+    font-family: 'Source Sans Pro', sans-serif;
+    line-height: 1.5em;
+    text-align: center;
+}
+
+h1 {
+    font-weight: normal;
+    margin: 0 0 1em 0;
+}
+
+.password-box {
+    width: 25em;
+    padding: 2em 1em;
+    background: #eff3f6;
+    margin: 4em auto 0;
+    text-align: left;
+}
+
+.error-box {
+    padding: 0.5em;
+    background: #ffcdd2;
+    margin-bottom: 0.5em;
+}
+
+.form-input-wrap {
+    margin-bottom: 0.5em;
+}
+
+.form-input-wrap input {
+    width: 100%;
+    border: none;
+    outline: none;
+    padding: 0.8em;
+    box-sizing: border-box;
+    box-shadow: 0 2px 2px 0 rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.08);
+    border-radius: 2px;
+}
+
+.form-input-wrap .password {
+    font-family: monospace;
+}
+
+.form-submit {
+    font-family: inherit;
+    padding: 0.5em 1.5em;
+    margin-top: .5em;
+    background: #90CAF9;
+    border: none;
+    font-weight: bold;
+    border-radius: 0.5em;
+    border-bottom: 2px solid #2196F3;
+    color: white;
+    outline: none;
+}

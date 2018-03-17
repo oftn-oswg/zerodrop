@@ -1,0 +1,18 @@
+{{define "login"}}
+{{template "header"}}
+<div class="password-box">
+    <h1>Oneshot Login</h1>
+    {{if .Error}}
+    <div class="error-box">{{.Error | html}}</div>
+    {{end}}
+    <div class="form">
+        <form method="POST">
+            <div class="form-input-wrap">
+                <input type="password" name="credentials" class="password"/>
+            </div>
+            <input class="form-submit" type="submit" value="Login"/>
+        </form>
+    </div>
+</div>
+{{template "footer"}}
+{{end}}
