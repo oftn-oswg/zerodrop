@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/http"
 	"strconv"
 	"strings"
 )
@@ -21,4 +22,13 @@ func ParseSocketName(value string) (string, string) {
 	}
 
 	return "tcp", value
+}
+
+// RealRemoteAddr returns the value of the X-Real-IP header,
+// or the RemoteAddr property if the header does not exist.
+func RealRemoteAddr(r *http.Request) string {
+	if real := r.Header.Get("x-Real-IP"); real != "" {
+		return real
+	}
+	return r.RemoteAddr
 }

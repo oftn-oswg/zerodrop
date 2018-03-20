@@ -70,7 +70,7 @@ func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request, data *
 }
 
 func (a *AdminHandler) ServeInterface(w http.ResponseWriter, r *http.Request) {
-	log.Println("Access granted to " + r.URL.Path + " from IP " + r.RemoteAddr)
+	log.Println("Access granted to " + r.URL.Path + " from IP " + RealRemoteAddr(r))
 
 	if r.Method == "POST" {
 		r.ParseForm()
@@ -111,7 +111,7 @@ func (a *AdminHandler) ServeInterface(w http.ResponseWriter, r *http.Request) {
 
 // ServeHTTP generates the HTTP response.
 func (a *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println("Access to " + r.URL.Path + " from IP " + r.RemoteAddr)
+	log.Println("Access to " + r.URL.Path + " from IP " + RealRemoteAddr(r))
 
 	data := &AdminPageData{}
 	data.Config = a.Config
@@ -181,7 +181,7 @@ func (a *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		data.Error = "Invalid password"
-		log.Println("Invalid password '" + creds[0] + "' from IP " + r.RemoteAddr)
+		log.Println("Invalid password '" + creds[0] + "' from IP " + RealRemoteAddr(r))
 		a.ServeLogin(w, r, data)
 		return
 	}
