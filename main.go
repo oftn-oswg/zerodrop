@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/jinzhu/configor"
 )
@@ -30,6 +31,10 @@ func main() {
 	configor.Load(&config, configFile)
 
 	network, address := ParseSocketName(config.Listen)
+	if network == "unix" {
+		os.Remove(address)
+	}
+
 	socket, err := net.Listen(network, address)
 	if err != nil {
 		log.Fatal(err)
