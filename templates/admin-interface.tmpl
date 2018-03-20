@@ -27,13 +27,25 @@
 <div class="admin-box">
     <ul class="shotlist">
         {{range .Entries}}
-            <li class="{{if .Redirect}}shot-redirect {{end}}">
-                <a href="{{$.Config.Base}}{{.UUID}}">{{.URL}}</a>
-                <span class="shot-count">{{.AccessCount}}</span> /
-                <span class="shot-expire">{{.AccessExpiry}}</span>
+            <li class="{{if .Redirect}}shot-redirect {{end}}shot-entry">
+                <div class="shot-url"><a href="{{$.Config.Base}}{{.UUID}}">{{.URL}}</a></div>
+                <div class="shot-access">
+                    <span class="shot-count">{{.AccessCount}}</span> /
+                    <span class="shot-expire">{{.AccessExpiry}}</span>
+                </div>
+                <form method="post">
+                    <input type="hidden" name="uuid" value="{{.UUID}}"/>
+                    <input type="hidden" name="action" value="delete"/>
+                    <a href="#" onclick="this.parentNode.submit();return false;" class="shot-delete">[Delete]</a>
+                </form>
             </li>
         {{end}}
     </ul>
+
+    <form method="post">
+        <input type="hidden" name="action" value="clear"/>
+        <input type="submit" value="Clear All Entries" class="form-submit"/>
+    </form>
 </div>
 {{end}}
 {{- template "footer" $ -}}

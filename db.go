@@ -75,3 +75,11 @@ func (d *OneshotDB) Create(entry *OneshotEntry) error {
 
 	return nil
 }
+
+func (d *OneshotDB) Remove(uuid string) {
+	delete(d.mapping, uuid)
+}
+
+func (d *OneshotDB) Clear() {
+	d.Connect()
+}

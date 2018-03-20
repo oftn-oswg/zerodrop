@@ -94,25 +94,35 @@ ul.shotlist {
     list-style: none;
 }
 
-.shotlist li {
-    text-align: right;
+li.shot-entry {
+    display: flex;
     padding: 0.25em;
     border-bottom: 1px solid #2196F3;
 }
 
-.shotlist li a {
-    float: left;
+li.shot-entry .shot-url {
+    flex-grow: 1;
+}
+
+li.shot-entry .shot-delete {
+    display: none;
+    padding-left: 0.5em;
+}
+li.shot-entry:hover .shot-delete {
+    display: inline;
+}
+
+li.shot-entry a {
     color: inherit;
     text-decoration: none;
-    text-align: left;
 }
 
 .shotlist li a:hover {
     text-decoration: underline;
 }
 
-li.shot-redirect::after {
-    content: "↬";
+li.shot-redirect .shot-url::before {
+    content: "↬ ";
 }
 
 span.shot-count {

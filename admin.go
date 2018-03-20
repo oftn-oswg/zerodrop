@@ -76,7 +76,8 @@ func (a *AdminHandler) ServeInterface(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		r.ParseForm()
 
-		if r.FormValue("action") == "add" {
+		switch r.FormValue("action") {
+		case "add":
 			accessExpiry, err := strconv.Atoi(r.FormValue("access_expiry"))
 			if err != nil {
 				accessExpiry = 0
@@ -93,6 +94,18 @@ func (a *AdminHandler) ServeInterface(w http.ResponseWriter, r *http.Request) {
 			if err := a.DB.Create(entry); err == nil {
 				log.Printf("Added entry: %#v", entry)
 			}
+
+		case "delete":
+			uuid := r.FormValue("uuid")
+			if uuid != "" {
+				a.DB.Remove(uuid)
+				log.Printf("Removed entry: %s", uuid)
+			}
+
+		case "clear":
+			a.DB.Clear()
+			log.Println("Cleared all entries")
+
 		}
 
 		http.Redirect(w, r, a.Config.Base+"admin/", 302)
