@@ -57,6 +57,7 @@ func NewAdminHandler(db *OneshotDB, config *OneshotConfig) *AdminHandler {
 
 type AdminPageData struct {
 	Error   string
+	Title   string
 	Config  *OneshotConfig
 	Entries []OneshotEntry
 }
@@ -99,6 +100,7 @@ func (a *AdminHandler) ServeInterface(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := &AdminPageData{}
+	data.Title = "Oneshot Admin"
 	data.Config = a.Config
 	data.Entries = a.DB.List()
 
@@ -112,6 +114,7 @@ func (a *AdminHandler) ServeInterface(w http.ResponseWriter, r *http.Request) {
 // ServeHTTP generates the HTTP response.
 func (a *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	data := &AdminPageData{}
+	data.Title = "Oneshot Login"
 	data.Config = a.Config
 
 	// Verify authentication
