@@ -17,7 +17,7 @@ import (
 )
 
 type AdminClaims struct {
-	admin bool
+	Admin bool `json:"admin"`
 	jwt.StandardClaims
 }
 
@@ -66,6 +66,7 @@ func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request, data *
 }
 
 func (a *AdminHandler) ServeInterface(w http.ResponseWriter, r *http.Request) {
+	log.Println("Access granted to " + r.URL.Path + " from IP " + r.RemoteAddr)
 	w.Write([]byte("Hello congratulations!"))
 }
 
@@ -99,7 +100,7 @@ func (a *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if subtle.ConstantTimeCompare(validDigest, digest[:]) == 1 {
 
 			// Authentication successful; set cookie
-			token := jwt.NewWithClaims(jwt.SigningMethodHS256, AdminClaims{admin: true})
+			token := jwt.NewWithClaims(jwt.SigningMethodHS256, AdminClaims{Admin: true})
 			tokenString, err := token.SignedString([]byte(a.Config.AuthSecret))
 			if err != nil {
 				data.Error = "Could not validate authentication"
@@ -127,17 +128,21 @@ func (a *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Verify authentication
 	if cookie, err := r.Cookie("jwt"); err == nil {
-		token, _ := jwt.Parse(cookie.Value, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-			}
-			return []byte(a.Config.AuthSecret), nil
-		})
-		if claims, ok := token.Claims.(AdminClaims); ok && token.Valid {
-			if claims.admin {
+		token, err := jwt.ParseWithClaims(cookie.Value, &AdminClaims{},
+			func(token *jwt.Token) (interface{}, error) {
+				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+				}
+				return []byte(a.Config.AuthSecret), nil
+			})
+		if claims, ok := token.Claims.(*AdminClaims); ok && token.Valid {
+			if claims.Admin {
 				a.ServeInterface(w, r)
 				return
 			}
+		} else {
+			data.Error = "Unknown error parsing validation cookie"
+			log.Println(err)
 		}
 	}
 
