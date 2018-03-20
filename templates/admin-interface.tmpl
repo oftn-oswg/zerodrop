@@ -23,6 +23,7 @@
         <input class="form-submit" type="submit" value="Add"/>
     </form>
 </div>
+{{if .Entries}}
 <div class="admin-box">
     <ul class="shotlist">
         {{range .Entries}}
@@ -34,5 +35,6 @@
         {{end}}
     </ul>
 </div>
+{{end}}
 {{template "footer" $}}
 {{end}}
