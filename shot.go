@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -24,6 +25,8 @@ func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		a.NotFound.ServeHTTP(w, r)
 		return
 	}
+
+	log.Println("Access to " + r.URL.Path + " granted to IP " + RealRemoteAddr(r))
 
 	if entry.Redirect {
 		// Perform a redirect to the URL.

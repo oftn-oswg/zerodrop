@@ -70,7 +70,7 @@ func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request, data *
 }
 
 func (a *AdminHandler) ServeInterface(w http.ResponseWriter, r *http.Request) {
-	log.Println("Access granted to " + r.URL.Path + " from IP " + RealRemoteAddr(r))
+	log.Println("Access to " + r.URL.Path + " granted to IP " + RealRemoteAddr(r))
 
 	if r.Method == "POST" {
 		r.ParseForm()
@@ -111,8 +111,6 @@ func (a *AdminHandler) ServeInterface(w http.ResponseWriter, r *http.Request) {
 
 // ServeHTTP generates the HTTP response.
 func (a *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println("Access to " + r.URL.Path + " from IP " + RealRemoteAddr(r))
-
 	data := &AdminPageData{}
 	data.Config = a.Config
 
