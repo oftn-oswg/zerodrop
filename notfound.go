@@ -7,5 +7,5 @@ import (
 type NotFoundHandler struct{}
 
 func (n NotFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "File not found", 404)
+	http.Error(w, "File not found", 200)
 }

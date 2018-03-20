@@ -27,7 +27,8 @@ func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if entry.Redirect {
 		// Perform a redirect to the URL.
-		http.Redirect(w, r, entry.URL, 302)
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		http.Redirect(w, r, entry.URL, 307)
 		return
 	}
 
@@ -38,14 +39,20 @@ func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	proxy := &httputil.ReverseProxy{Director: func(req *http.Request) {
-		req.URL = target
-		req.Host = target.Host
-		if _, ok := req.Header["User-Agent"]; !ok {
-			// explicitly disable User-Agent so it's not set to default value
-			req.Header.Set("User-Agent", "")
-		}
-	}}
+	proxy := &httputil.ReverseProxy{
+		Director: func(req *http.Request) {
+			req.URL = target
+			req.Host = target.Host
+			if _, ok := req.Header["User-Agent"]; !ok {
+				// explicitly disable User-Agent so it's not set to default value
+				req.Header.Set("User-Agent", "")
+			}
+		},
+		ModifyResponse: func(res *http.Response) error {
+			res.Header.Set("Cache-Control", "no-cache, no-store, must-revalidate")
+			return nil
+		},
+	}
 
 	proxy.ServeHTTP(w, r)
 }
