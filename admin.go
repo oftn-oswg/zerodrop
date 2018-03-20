@@ -56,7 +56,9 @@ func NewAdminHandler(db *OneshotDB, config *OneshotConfig) *AdminHandler {
 }
 
 type AdminPageData struct {
-	Error string
+	Error   string
+	Config  *OneshotConfig
+	Entries []OneshotEntry
 }
 
 func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request, data *AdminPageData) {
@@ -92,11 +94,13 @@ func (a *AdminHandler) ServeInterface(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		http.Redirect(w, r, "/admin/", 302)
+		http.Redirect(w, r, a.Config.Base+"admin/", 302)
 		return
 	}
 
-	data := a.DB.List()
+	data := &AdminPageData{}
+	data.Config = a.Config
+	data.Entries = a.DB.List()
 
 	interfaceTmpl := a.Templates.Lookup("admin-interface.tmpl")
 	err := interfaceTmpl.ExecuteTemplate(w, "admin", data)
@@ -110,6 +114,7 @@ func (a *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Println("Access to " + r.URL.Path + " from IP " + r.RemoteAddr)
 
 	data := &AdminPageData{}
+	data.Config = a.Config
 
 	// Verify authentication
 	if cookie, err := r.Cookie("jwt"); err == nil {
@@ -137,7 +142,7 @@ func (a *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		creds, ok := r.Form["credentials"]
 		if !ok || len(creds) < 1 {
-			http.Redirect(w, r, "/admin/", 302)
+			http.Redirect(w, r, a.Config.Base+"admin/", 302)
 			return
 		}
 
@@ -171,7 +176,7 @@ func (a *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				// Secure: true,
 			})
 
-			http.Redirect(w, r, "/admin/", 302)
+			http.Redirect(w, r, a.Config.Base+"admin/", 302)
 			return
 		}
 

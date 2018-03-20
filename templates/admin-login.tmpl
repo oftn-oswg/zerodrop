@@ -1,5 +1,5 @@
 {{define "login"}}
-{{template "header"}}
+{{template "header" $}}
 <div class="password-box">
     <h1>Oneshot Login</h1>
     {{if .Error}}
@@ -14,5 +14,5 @@
         </form>
     </div>
 </div>
-{{template "footer"}}
+{{template "footer" $}}
 {{end}}

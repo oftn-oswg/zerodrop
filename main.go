@@ -13,6 +13,7 @@ import (
 // OneshotConfig holds the configuration for an application instance.
 type OneshotConfig struct {
 	Listen     string `default:"8080"`
+	Base       string `default:"/"`
 	AuthSecret string `default:"ggVUtPQdIL3kuMSeHQgn7PW9nv3XuJBp"`
 	AuthDigest string `default:"11a55ac5de2beb9146e01386dd978a13bb9b99388f5eb52e37f69a32e3d5f11e"`
 }
@@ -29,6 +30,7 @@ func main() {
 
 	// Population configuration struct
 	configor.Load(&config, configFile)
+	log.Printf("Loaded configuration: %#v", config)
 
 	network, address := ParseSocketName(config.Listen)
 	if network == "unix" {

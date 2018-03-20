@@ -1,5 +1,5 @@
 {{define "admin"}}
-{{template "header"}}
+{{template "header" $}}
 <div class="admin-box">
     <form method="post">
         <div class="field">
@@ -25,14 +25,14 @@
 </div>
 <div class="admin-box">
     <ul class="shotlist">
-        {{range .}}
+        {{range .Entries}}
             <li class="{{if .Redirect}}shot-redirect {{end}}">
-                <a href="/{{.UUID}}">{{.URL}}</a>
+                <a href="{{$.Config.Base}}{{.UUID}}">{{.URL}}</a>
                 <span class="shot-count">{{.AccessCount}}</span> /
                 <span class="shot-expire">{{.AccessExpiry}}</span>
             </li>
         {{end}}
     </ul>
 </div>
-{{template "footer"}}
+{{template "footer" $}}
 {{end}}
