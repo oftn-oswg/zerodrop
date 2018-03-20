@@ -1,9 +1,9 @@
 package main
 
 import (
-	"io"
-	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strings"
 )
 
@@ -32,16 +32,20 @@ func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Perform a proxying
-	response, err := http.Get(entry.URL)
+	target, err := url.Parse(entry.URL)
 	if err != nil {
-		log.Println("Error serving " + uuid + ": " + err.Error())
-		a.NotFound.ServeHTTP(w, r)
+		http.Error(w, "Could not parse URL", 500)
 		return
 	}
-	go func() {
-		_, err := io.Copy(w, response.Body)
-		if err != nil {
-			log.Println(err)
+
+	proxy := &httputil.ReverseProxy{Director: func(req *http.Request) {
+		req.URL = target
+		req.Host = target.Host
+		if _, ok := req.Header["User-Agent"]; !ok {
+			// explicitly disable User-Agent so it's not set to default value
+			req.Header.Set("User-Agent", "")
 		}
-	}()
+	}}
+
+	proxy.ServeHTTP(w, r)
 }

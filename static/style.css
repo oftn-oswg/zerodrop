@@ -12,12 +12,20 @@ h1 {
     margin: 0 0 1em 0;
 }
 
-.password-box {
-    width: 25em;
+.admin-box, .password-box {
     padding: 2em 1em;
     background: #eff3f6;
     margin: 4em auto 0;
     text-align: left;
+    overflow: hidden;
+}
+
+.password-box {
+    width: 25em;
+}
+
+.admin-box {
+    width: 640px;
 }
 
 .error-box {
@@ -30,7 +38,7 @@ h1 {
     margin-bottom: 0.5em;
 }
 
-.form-input-wrap input {
+.form-input-wrap input, .form-number-wrap input {
     width: 100%;
     border: none;
     outline: none;
@@ -55,4 +63,58 @@ h1 {
     border-bottom: 2px solid #2196F3;
     color: white;
     outline: none;
+    clear: both;
+    float: right;
+}
+
+.field {
+    margin-bottom: 1em;
+}
+
+.field-col {
+    display: flex;
+}
+
+.field-col .field {
+    margin-right: 1em;
+}
+
+.field-name {
+    display: inline;
+    margin-right: 0.5em;
+}
+
+.field-value {
+    display: inline;
+}
+
+ul.shotlist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.shotlist li {
+    text-align: right;
+    padding: 0.25em;
+    border-bottom: 1px solid #2196F3;
+}
+
+.shotlist li a {
+    float: left;
+    color: inherit;
+    text-decoration: none;
+    text-align: left;
+}
+
+.shotlist li a:hover {
+    text-decoration: underline;
+}
+
+li.shot-redirect::after {
+    content: "↬";
+}
+
+span.shot-count {
+    color: grey;
 }

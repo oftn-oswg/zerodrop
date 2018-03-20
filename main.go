@@ -38,9 +38,13 @@ func main() {
 
 	notfound := NotFoundHandler{}
 
+	if err := db.Connect(); err != nil {
+		log.Fatal(err)
+	}
+
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	http.Handle("/admin/", NewAdminHandler(&config))
+	http.Handle("/admin/", NewAdminHandler(&db, &config))
 	http.Handle("/", &ShotHandler{DB: &db, Config: &config, NotFound: notfound})
 	http.Serve(socket, nil)
 }

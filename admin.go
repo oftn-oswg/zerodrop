@@ -10,6 +10,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,14 +25,15 @@ type AdminClaims struct {
 // AdminHandler serves the administration page, or asks for credentials if not
 // already authenticated.
 type AdminHandler struct {
+	DB        *OneshotDB
 	Config    *OneshotConfig
 	Templates *template.Template
 }
 
 // NewAdminHandler creates a new admin handler with the specified configuration
 // and loads the template files into cache.
-func NewAdminHandler(config *OneshotConfig) *AdminHandler {
-	handler := &AdminHandler{Config: config}
+func NewAdminHandler(db *OneshotDB, config *OneshotConfig) *AdminHandler {
+	handler := &AdminHandler{DB: db, Config: config}
 
 	var allFiles []string
 	files, err := ioutil.ReadDir("./templates")
@@ -67,7 +69,40 @@ func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request, data *
 
 func (a *AdminHandler) ServeInterface(w http.ResponseWriter, r *http.Request) {
 	log.Println("Access granted to " + r.URL.Path + " from IP " + r.RemoteAddr)
-	w.Write([]byte("Hello congratulations!"))
+
+	if r.Method == "POST" {
+		r.ParseForm()
+
+		if r.FormValue("action") == "add" {
+			accessExpiry, err := strconv.Atoi(r.FormValue("access_expiry"))
+			if err != nil {
+				accessExpiry = 0
+			}
+
+			entry := &OneshotEntry{
+				URL:          r.FormValue("url"),
+				Redirect:     r.FormValue("redirect") != "",
+				Creation:     time.Now(),
+				AccessExpiry: accessExpiry,
+				AccessCount:  0,
+			}
+
+			if err := a.DB.Create(entry); err == nil {
+				log.Printf("Added entry: %#v", entry)
+			}
+		}
+
+		http.Redirect(w, r, "/admin/", 302)
+		return
+	}
+
+	data := a.DB.List()
+
+	interfaceTmpl := a.Templates.Lookup("admin-interface.tmpl")
+	err := interfaceTmpl.ExecuteTemplate(w, "admin", data)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 // ServeHTTP generates the HTTP response.
@@ -75,6 +110,26 @@ func (a *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Println("Access to " + r.URL.Path + " from IP " + r.RemoteAddr)
 
 	data := &AdminPageData{}
+
+	// Verify authentication
+	if cookie, err := r.Cookie("jwt"); err == nil {
+		token, err := jwt.ParseWithClaims(cookie.Value, &AdminClaims{},
+			func(token *jwt.Token) (interface{}, error) {
+				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+				}
+				return []byte(a.Config.AuthSecret), nil
+			})
+		if claims, ok := token.Claims.(*AdminClaims); ok && token.Valid {
+			if claims.Admin {
+				a.ServeInterface(w, r)
+				return
+			}
+		} else {
+			data.Error = "Unknown error parsing validation cookie"
+			log.Println(err)
+		}
+	}
 
 	// Validate authentication
 	if r.Method == "POST" {
@@ -124,26 +179,6 @@ func (a *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Println("Invalid password '" + creds[0] + "' from IP " + r.RemoteAddr)
 		a.ServeLogin(w, r, data)
 		return
-	}
-
-	// Verify authentication
-	if cookie, err := r.Cookie("jwt"); err == nil {
-		token, err := jwt.ParseWithClaims(cookie.Value, &AdminClaims{},
-			func(token *jwt.Token) (interface{}, error) {
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-				}
-				return []byte(a.Config.AuthSecret), nil
-			})
-		if claims, ok := token.Claims.(*AdminClaims); ok && token.Valid {
-			if claims.Admin {
-				a.ServeInterface(w, r)
-				return
-			}
-		} else {
-			data.Error = "Unknown error parsing validation cookie"
-			log.Println(err)
-		}
 	}
 
 	a.ServeLogin(w, r, data)

@@ -1,8 +1,38 @@
 {{define "admin"}}
 {{template "header"}}
-<div class="password-box">
-    <h1>Oneshot</h1>
-    <p>Welcome.</p>
+<div class="admin-box">
+    <form method="post">
+        <div class="field">
+            <div class="field-value form-input-wrap"><input type="text" name="url" placeholder="https:// (URL)"/></div>
+        </div>
+        <div class="field-col">
+            <div class="field">
+                <label>
+                    <div class="field-name">Access Expiry Count:</div>
+                    <div class="field-value form-number-wrap"><input type="number" name="access_expiry" min="0" value="1"/></div>
+                </label>
+            </div>
+            <div class="field">
+                <label>
+                    <div class="field-name">Redirection:</div>
+                    <div class="field-value form-checkbox-wrap"><input type="checkbox" name="redirect"/></div>
+                </label>
+            </div>
+        </div>
+        <input type="hidden" name="action" value="add"/>
+        <input class="form-submit" type="submit" value="Add"/>
+    </form>
+</div>
+<div class="admin-box">
+    <ul class="shotlist">
+        {{range .}}
+            <li class="{{if .Redirect}}shot-redirect {{end}}">
+                <a href="/{{.UUID}}">{{.URL}}</a>
+                <span class="shot-count">{{.AccessCount}}</span> /
+                <span class="shot-expire">{{.AccessExpiry}}</span>
+            </li>
+        {{end}}
+    </ul>
 </div>
 {{template "footer"}}
 {{end}}
