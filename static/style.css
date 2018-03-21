@@ -106,6 +106,10 @@ li.shot-entry .shot-url {
     word-wrap: break-word;
 }
 
+li.shot-entry .shot-access {
+    padding-left: 0.5em;
+}
+
 li.shot-entry .shot-delete {
     display: none;
     padding-left: 0.5em;
@@ -131,13 +135,15 @@ span.shot-count {
     color: grey;
 }
 
-li.shot-expired .shot-url {
+li.shot-entry .shot-url a {
+    color: #2196F3;
+}
+li.shot-expired .shot-url a,
+li.shot-expired .shot-url a:hover {
     color: grey;
     text-decoration: line-through;
 }
-li.shot-expired .shot-url a:hover {
-    text-decoration: none;
-}
+
 li.shot-expired .shot-access .shot-count {
     color: #e57373;
 }
