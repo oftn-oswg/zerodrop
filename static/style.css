@@ -101,7 +101,9 @@ li.shot-entry {
 }
 
 li.shot-entry .shot-url {
-    flex-grow: 1;
+    flex: 1;
+    min-width: 0;
+    word-wrap: break-word;
 }
 
 li.shot-entry .shot-delete {
