@@ -128,3 +128,14 @@ li.shot-redirect .shot-url::before {
 span.shot-count {
     color: grey;
 }
+
+li.shot-expired .shot-url {
+    color: grey;
+    text-decoration: line-through;
+}
+li.shot-expired .shot-url a:hover {
+    text-decoration: none;
+}
+li.shot-expired .shot-access .shot-count {
+    color: #e57373;
+}

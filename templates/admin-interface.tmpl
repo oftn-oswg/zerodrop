@@ -20,14 +20,14 @@
             </div>
         </div>
         <input type="hidden" name="action" value="add"/>
-        <input class="form-submit" type="submit" value="Add"/>
+        <input class="form-submit" type="submit" value="Create"/>
     </form>
 </div>
 {{if .Entries}}
 <div class="admin-box">
     <ul class="shotlist">
         {{range .Entries}}
-            <li class="{{if .Redirect}}shot-redirect {{end}}shot-entry">
+            <li class="shot-entry{{if .Redirect}} shot-redirect{{end}}{{if ge .AccessCount .AccessExpiry}} shot-expired{{end}}">
                 <div class="shot-url"><a href="{{$.Config.Base}}{{.UUID}}">{{.URL}}</a></div>
                 <div class="shot-access">
                     <span class="shot-count">{{.AccessCount}}</span> /
