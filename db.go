@@ -7,7 +7,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-type OneshotEntry struct {
+type ZerodropEntry struct {
 	UUID         string
 	URL          string
 	Redirect     bool
@@ -16,28 +16,28 @@ type OneshotEntry struct {
 	AccessCount  int
 }
 
-func (e *OneshotEntry) IsExpired() bool {
+func (e *ZerodropEntry) IsExpired() bool {
 	return e.AccessCount >= e.AccessExpiry
 }
 
-type OneshotDB struct {
-	mapping map[string]OneshotEntry
+type ZerodropDB struct {
+	mapping map[string]ZerodropEntry
 }
 
-func (d *OneshotDB) Connect() error {
-	d.mapping = map[string]OneshotEntry{}
+func (d *ZerodropDB) Connect() error {
+	d.mapping = map[string]ZerodropEntry{}
 	return nil
 }
 
-func (d *OneshotDB) Get(uuid string) (entry OneshotEntry, ok bool) {
+func (d *ZerodropDB) Get(uuid string) (entry ZerodropEntry, ok bool) {
 	entry, ok = d.mapping[uuid]
 	return
 }
 
 // List returns a slice of all entries sorted by creation time,
 // with the most recent first.
-func (d *OneshotDB) List() []OneshotEntry {
-	list := []OneshotEntry{}
+func (d *ZerodropDB) List() []ZerodropEntry {
+	list := []ZerodropEntry{}
 
 	for _, entry := range d.mapping {
 		list = append(list, entry)
@@ -52,7 +52,7 @@ func (d *OneshotDB) List() []OneshotEntry {
 	return list
 }
 
-func (d *OneshotDB) Access(uuid string) (entry OneshotEntry, ok bool) {
+func (d *ZerodropDB) Access(uuid string) (entry ZerodropEntry, ok bool) {
 	entry, ok = d.Get(uuid)
 
 	if ok {
@@ -64,7 +64,7 @@ func (d *OneshotDB) Access(uuid string) (entry OneshotEntry, ok bool) {
 	return
 }
 
-func (d *OneshotDB) Create(entry *OneshotEntry) error {
+func (d *ZerodropDB) Create(entry *ZerodropEntry) error {
 	id, err := uuid.NewV4()
 	if err != nil {
 		return err
@@ -76,10 +76,10 @@ func (d *OneshotDB) Create(entry *OneshotEntry) error {
 	return nil
 }
 
-func (d *OneshotDB) Remove(uuid string) {
+func (d *ZerodropDB) Remove(uuid string) {
 	delete(d.mapping, uuid)
 }
 
-func (d *OneshotDB) Clear() {
+func (d *ZerodropDB) Clear() {
 	d.Connect()
 }

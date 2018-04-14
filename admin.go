@@ -25,14 +25,14 @@ type AdminClaims struct {
 // AdminHandler serves the administration page, or asks for credentials if not
 // already authenticated.
 type AdminHandler struct {
-	DB        *OneshotDB
-	Config    *OneshotConfig
+	DB        *ZerodropDB
+	Config    *ZerodropConfig
 	Templates *template.Template
 }
 
 // NewAdminHandler creates a new admin handler with the specified configuration
 // and loads the template files into cache.
-func NewAdminHandler(db *OneshotDB, config *OneshotConfig) *AdminHandler {
+func NewAdminHandler(db *ZerodropDB, config *ZerodropConfig) *AdminHandler {
 	handler := &AdminHandler{DB: db, Config: config}
 
 	var allFiles []string
@@ -58,8 +58,8 @@ func NewAdminHandler(db *OneshotDB, config *OneshotConfig) *AdminHandler {
 type AdminPageData struct {
 	Error   string
 	Title   string
-	Config  *OneshotConfig
-	Entries []OneshotEntry
+	Config  *ZerodropConfig
+	Entries []ZerodropEntry
 }
 
 func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request, data *AdminPageData) {
@@ -83,7 +83,7 @@ func (a *AdminHandler) ServeInterface(w http.ResponseWriter, r *http.Request) {
 				accessExpiry = 0
 			}
 
-			entry := &OneshotEntry{
+			entry := &ZerodropEntry{
 				URL:          r.FormValue("url"),
 				Redirect:     r.FormValue("redirect") != "",
 				Creation:     time.Now(),
@@ -113,7 +113,7 @@ func (a *AdminHandler) ServeInterface(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := &AdminPageData{}
-	data.Title = "Oneshot Admin"
+	data.Title = "Zerodrop Admin"
 	data.Config = a.Config
 	data.Entries = a.DB.List()
 
@@ -127,7 +127,7 @@ func (a *AdminHandler) ServeInterface(w http.ResponseWriter, r *http.Request) {
 // ServeHTTP generates the HTTP response.
 func (a *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	data := &AdminPageData{}
-	data.Title = "Oneshot Login"
+	data.Title = "Zerodrop Login"
 	data.Config = a.Config
 
 	// Verify authentication

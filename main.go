@@ -10,8 +10,8 @@ import (
 	"github.com/jinzhu/configor"
 )
 
-// OneshotConfig holds the configuration for an application instance.
-type OneshotConfig struct {
+// ZerodropConfig holds the configuration for an application instance.
+type ZerodropConfig struct {
 	Listen     string `default:"8080"`
 	Base       string `default:"/"`
 	AuthSecret string `default:"ggVUtPQdIL3kuMSeHQgn7PW9nv3XuJBp"`
@@ -19,12 +19,12 @@ type OneshotConfig struct {
 }
 
 func main() {
-	var db OneshotDB
-	var config OneshotConfig
+	var db ZerodropDB
+	var config ZerodropConfig
 	var configFile string
 
 	// Parse configuration file from command line
-	flag.StringVar(&configFile, "config", "/etc/oneshot/config.yml",
+	flag.StringVar(&configFile, "config", "/etc/zerodrop/config.yml",
 		"Location of the configuration file")
 	flag.Parse()
 

@@ -11,8 +11,8 @@ import (
 // ShotHandler serves the requested page and removes it from the database, or
 // returns 404 page if not available.
 type ShotHandler struct {
-	DB       *OneshotDB
-	Config   *OneshotConfig
+	DB       *ZerodropDB
+	Config   *ZerodropConfig
 	NotFound NotFoundHandler
 }
 
