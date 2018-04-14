@@ -1,5 +1,14 @@
-Listen: 8080
-Base: /
+# Unix or TCP socket to listen for web requests
+listen: 8080
 
-AuthSecret: "ggVUtPQdIL3kuMSeHQgn7PW9nv3XuJBp"
-AuthDigest: 11a55ac5de2beb9146e01386dd978a13bb9b99388f5eb52e37f69a32e3d5f11e
+# Group of the Unix socket
+group: www-data
+
+# Root of the publicly facing web server to prepend links
+base: /
+
+# A secret used to sign authorization tokens
+authsecret: "ggVUtPQdIL3kuMSeHQgn7PW9nv3XuJBp"
+
+# The SHA-256 hash of the password to gain admin access
+authdigest: 11a55ac5de2beb9146e01386dd978a13bb9b99388f5eb52e37f69a32e3d5f11e

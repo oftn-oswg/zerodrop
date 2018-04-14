@@ -6,13 +6,18 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/user"
+	"strconv"
+	"syscall"
 
 	"github.com/jinzhu/configor"
 )
 
 // ZerodropConfig holds the configuration for an application instance.
 type ZerodropConfig struct {
-	Listen     string `default:"8080"`
+	Listen string `default:"8080"`
+	Group  string `default:"www-data"`
+
 	Base       string `default:"/"`
 	AuthSecret string `default:"ggVUtPQdIL3kuMSeHQgn7PW9nv3XuJBp"`
 	AuthDigest string `default:"11a55ac5de2beb9146e01386dd978a13bb9b99388f5eb52e37f69a32e3d5f11e"`
@@ -33,7 +38,10 @@ func main() {
 	log.Printf("Loaded configuration: %#v", config)
 
 	network, address := ParseSocketName(config.Listen)
+
+	oldmask := 0
 	if network == "unix" {
+		oldmask = syscall.Umask(0660)
 		os.Remove(address)
 	}
 
@@ -42,6 +50,22 @@ func main() {
 		log.Fatal(err)
 	}
 	defer socket.Close()
+
+	if network == "unix" {
+		uid := os.Geteuid()
+		group, err := user.LookupGroup(config.Group)
+		if err != nil {
+			log.Fatal(err)
+		}
+		gid, err := strconv.Atoi(group.Gid)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := os.Chown(address, uid, gid); err != nil {
+			log.Fatal(err)
+		}
+		syscall.Umask(oldmask)
+	}
 
 	notfound := NotFoundHandler{}
 
