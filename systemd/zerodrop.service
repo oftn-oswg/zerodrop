@@ -1,0 +1,20 @@
+[Unit]
+# https://github.com/oftn-oswg/zerodrop
+Description=Zerodrop
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+User=zerodrop
+Group=zerodrop
+WorkingDirectory=/home/zerodrop/zerodrop
+PermissionsStartOnly=true
+ExecStartPre=/bin/mkdir -p /var/run/zerodrop
+ExecStartPre=/bin/chown zerodrop:www-data /var/run/zerodrop
+ExecStart=/home/zerodrop/zerodrop/zerodrop
+Restart=always
+Environment=USER=zerodrop HOME=/home/zerodrop
+
+[Install]
+WantedBy=multi-user.target
