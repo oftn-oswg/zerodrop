@@ -1,5 +1,131 @@
 {{define "admin"}}
 {{- template "header" $ -}}
+        <form method="post">
+            <div class="card mb-3 zd_form_source">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="url-tab" data-toggle="tab" href="#url" role="" aria-controls="url" aria-selected="true">
+                                <input id="zd_form_source_url" type="radio" name="source" checked hidden value="url" />URL
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="file-tab" data-toggle="tab" href="#file" role="" aria-controls="file" aria-selected="false">
+                                <input id="zd_form_source_file" type="radio" name="source" hidden value="file" />File Upload
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="text-tab" data-toggle="tab" href="#text" role="" aria-controls="text" aria-selected="false">
+                                <input id="zd_form_source_text" type="radio" name="source" hidden value="text" />Textarea
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body tab-content" id="zd_form_source_panel">
+                    <div class="tab-pane show active" id="url" role="tabpanel">
+                        <!-- URL Source -->
+                        <div class="form-group">
+                            <input name="url" type="url" class="form-control form-control-lg" placeholder="https://" />
+                        </div>
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="url_type" id="url_type_redirection" value="redirect" checked/>
+                                <label class="form-check-label" for="url_type_redirection">
+                                    Redirection
+                                    <small class="form-text text-muted">
+                                        Performs a 307 HTTP redirection to the specified URL.
+                                    </small>
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="url_type" id="url_type_proxy" value="proxy" />
+                                <label class="form-check-label" for="url_type_proxy">
+                                    Proxy
+                                    <small class="form-text text-muted">
+                                        Hides the source URL by loading the data server-side into the response body.
+                                    </small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="file" role="tabpanel">
+                        <!-- File Source -->
+                        <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">Upload</span>
+                            </div>
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input" id="inputGroupFile01">
+                                <label class="custom-file-label" for="inputGroupFile01">Choose local file</label>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="source_content_type" class="col-sm-2 col-form-label">Content-Type</label>
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="source_content_type" placeholder="text/plain">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="text" role="tabpanel">
+                        <!-- Text Source -->
+                        <div class="form-group">
+                            <textarea class="form-control" id="source_text" rows="8" style="font-family: Consolas, Lucida Console, monospace;"></textarea>
+                        </div>
+                        <div class="form-group row">
+                            <label for="source_content_type" class="col-sm-2 col-form-label">Content-Type</label>
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="source_content_type" placeholder="text/plain">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card mb-3 zd_form_access">
+                <div class="card-body">
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">
+                                <input type="checkbox" id="access_expire" />
+                            </div>
+                        </div>
+                        <div class="input-group-prepend">
+                            <label class="input-group-text" for="access_expire">Expire access to the page after</label>
+                        </div>
+                        <input type="number" class="form-control" value="1" step="1" min="0" />
+                        <div class="input-group-append">
+                            <span class="input-group-text">request(s).</span>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label for="access_blacklist" class="col-sm-2 col-form-label">Blacklist</label>
+                        <div class="col-sm-10">
+                            <textarea class="form-control" id="access_blacklist" name="blacklist" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card mb-3 zd_form_publish">
+                <div class="card-body">
+                    <div class="form-group row">
+                        <div class="input-group col-sm-10">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">{{$.Config.Base}}</span>
+                            </div>
+                            <input type="text" name="publish" class="form-control" />
+                            <div class="input-group-append">
+                                <button type="button" class="btn btn-outline-secondary">Generate UUID</button>
+                            </div>
+                        </div>
+                        <div class="col-sm-2">
+                            <button class="btn btn-primary btn-block">Publish</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+
 <div class="admin-box">
     <form method="post">
         <div class="field">

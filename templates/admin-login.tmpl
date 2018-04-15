@@ -1,17 +1,21 @@
 {{define "login"}}
 {{template "header" $}}
-<div class="password-box">
-    <h1>Oneshot Login</h1>
-    {{if .Error}}
-    <div class="error-box">{{.Error | html}}</div>
-    {{end}}
-    <div class="form">
-        <form method="POST">
-            <div class="form-input-wrap">
-                <input type="password" name="credentials" class="password"/>
+<div class="row">
+    <div class="col-4 mx-auto">
+        <div class="card">
+            <div class="card-header">Zerodrop Login</div>
+            <div class="card-body">
+                {{if .Error}}
+                <div class="alert alert-danger" role="alert">{{.Error | html}}</div>
+                {{end}}
+                <form method="post">
+                    <div class="form-group">
+                        <input type="password" class="form-control" name="credentials" id="form-password" placeholder="Password">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
             </div>
-            <input class="form-submit" type="submit" value="Login"/>
-        </form>
+        </div>
     </div>
 </div>
 {{template "footer" $}}
