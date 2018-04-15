@@ -1,14 +1,9 @@
 package main
 
 import (
-	"crypto/sha256"
-	"crypto/subtle"
-	"encoding/hex"
-	"fmt"
 	"html/template"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
@@ -131,73 +126,26 @@ func (a *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	data.Config = a.Config
 
 	// Verify authentication
-	if cookie, err := r.Cookie("jwt"); err == nil {
-		token, err := jwt.ParseWithClaims(cookie.Value, &AdminClaims{},
-			func(token *jwt.Token) (interface{}, error) {
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-				}
-				return []byte(a.Config.AuthSecret), nil
-			})
-		if claims, ok := token.Claims.(*AdminClaims); ok && token.Valid {
-			if claims.Admin {
-				a.ServeInterface(w, r)
-				return
-			}
-		} else {
-			data.Error = "Unknown error parsing validation cookie"
-			log.Println(err)
-		}
+	ok, err := VerifyRequestAuth(r, a.Config.AuthSecret)
+	if err != nil {
+		data.Error = "Could not verify authentication"
+		log.Println(err)
+	}
+
+	if ok {
+		a.ServeInterface(w, r)
+		return
 	}
 
 	// Validate authentication
 	if r.Method == "POST" {
-		r.ParseForm()
-
-		creds, ok := r.Form["credentials"]
-		if !ok || len(creds) < 1 {
+		err := ValidateRequestAuth(w, r, a.Config.AuthSecret, a.Config.AuthDigest)
+		if err == nil {
 			http.Redirect(w, r, a.Config.Base+"admin/", 302)
-			return
+		} else {
+			data.Error = err.Error()
+			log.Println(err)
 		}
-
-		validDigest, err := hex.DecodeString(a.Config.AuthDigest)
-		if err != nil {
-			data.Error = "Could not authenticate"
-			log.Println(data.Error + ": " + err.Error())
-			a.ServeLogin(w, r, data)
-			return
-		}
-
-		digest := sha256.Sum256([]byte(creds[0]))
-
-		time.Sleep(2*time.Second + time.Duration(rand.Intn(2000)-1000)*time.Millisecond)
-		if subtle.ConstantTimeCompare(validDigest, digest[:]) == 1 {
-
-			// Authentication successful; set cookie
-			token := jwt.NewWithClaims(jwt.SigningMethodHS256, AdminClaims{Admin: true})
-			tokenString, err := token.SignedString([]byte(a.Config.AuthSecret))
-			if err != nil {
-				data.Error = "Could not validate authentication"
-				log.Println(data.Error + ": " + err.Error())
-				a.ServeLogin(w, r, data)
-				return
-			}
-
-			http.SetCookie(w, &http.Cookie{
-				Name:   "jwt",
-				Value:  tokenString,
-				MaxAge: 24 * 60 * 60, // 1 day
-				// Secure: true,
-			})
-
-			http.Redirect(w, r, a.Config.Base+"admin/", 302)
-			return
-		}
-
-		data.Error = "Invalid password"
-		log.Println("Invalid password '" + creds[0] + "' from IP " + RealRemoteAddr(r))
-		a.ServeLogin(w, r, data)
-		return
 	}
 
 	a.ServeLogin(w, r, data)
