@@ -74,9 +74,23 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fs := http.FileServer(http.Dir("static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	http.Handle("/admin/", NewAdminHandler(&db, &config))
+	adminHandler := NewAdminHandler(&db, &config)
+
+	authHandler := &AuthHandler{
+		Credentials: AuthCredentials{
+			Digest: config.AuthDigest,
+			Secret: []byte(config.AuthSecret),
+		},
+
+		Success: adminHandler,
+		Failure: http.HandlerFunc(adminHandler.ServeLogin),
+
+		FailureRedirect: config.Base + "admin/login?err=1",
+		SuccessRedirect: config.Base + "admin/",
+	}
+
+	http.Handle("/admin/", http.StripPrefix("/admin", authHandler))
+	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("static"))))
 	http.Handle("/", &ShotHandler{DB: &db, Config: &config, NotFound: notfound})
 	http.Serve(socket, nil)
 }

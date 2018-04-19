@@ -1,0 +1,95 @@
+{{define "main"}}
+{{template "header" $}}
+<ul class="nav nav-pills mb-3">
+    <li class="nav-item">
+        <a class="nav-link active" href="{{$.Config.Base}}admin/">Entries</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="{{$.Config.Base}}admin/new">New</a>
+    </li>
+</ul>
+<div class="card mb-5">
+    <ul class="list-group list-group-flush">
+        <li class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-1 flex-grow-1">
+                    <a href="https://go.eligrey.com/t/70bcd839-cec7-4970-88d5-f2c77dfb1c8a">70bcd839-cec7-4970-88d5-f2c77dfb1c8a</a>
+                </h5>
+                <span title="Access attempts" class="badge badge-danger badge-pill mr-3">14/5</span>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Actions
+                    </button>
+                    <div class="dropdown-menu">
+                        <a class="dropdown-item" href="#">View Blacklist</a>
+                        <a class="dropdown-item" href="#">Begin Blacklist Training</a>
+                        <div role="separator" class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="#">Delete</a>
+                    </div>
+                </div>
+            </div>
+            <p class="mb-1">
+                <small>
+                    Proxy of
+                    <a href="https://arxiv.org/ftp/arxiv/papers/1802/1802.07228.pdf">https://arxiv.org/ftp/arxiv/papers/1802/1802.07228.pdf</a>
+                </small>
+            </p>
+        </li>
+        <li class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-1 flex-grow-1">
+                    <a href="https://go.eligrey.com/t/search">search</a>
+                </h5>
+                <span title="Access attempts" class="badge badge-secondary badge-pill mr-3">1/2</span>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Actions
+                    </button>
+                    <div class="dropdown-menu">
+                        <a class="dropdown-item" href="#">View Blacklist</a>
+                        <a class="dropdown-item" href="#">Begin Blacklist Training</a>
+                        <div role="separator" class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="#">Delete</a>
+                    </div>
+                </div>
+            </div>
+            <p class="mb-1">
+                <small>
+                    Redirection to
+                    <a href="https://www.google.com/">https://www.google.com/</a>
+                </small>
+            </p>
+        </li>
+        <li class="list-group-item list-group-item-warning">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-1 flex-grow-1">
+                    <a href="https://go.eligrey.com/t/1bf52941-7210-4923-8a7a-af44bfb5a61e">1bf52941-7210-4923-8a7a-af44bfb5a61e</a>
+                </h5>
+                <span title="Access attempts" class="badge badge-secondary badge-pill mr-3">4</span>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Actions
+                    </button>
+                    <div class="dropdown-menu">
+                        <a class="dropdown-item" href="#">View Blacklist</a>
+                        <a class="dropdown-item" href="#">End Blacklist Training</a>
+                        <div role="separator" class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="#">Delete</a>
+                    </div>
+                </div>
+            </div>
+            <p class="mb-1">
+                <small>
+                    Redirection to
+                    <a href="https://www.uuidgenerator.net/">https://www.uuidgenerator.net/</a>
+                </small>
+            </p>
+        </li>
+    </ul>
+
+    <div class="card-footer">
+        <button type="button" class="btn btn-danger float-right">Clear all entries</button>
+    </div>
+</div>
+{{template "footer" $}}
+{{end}}

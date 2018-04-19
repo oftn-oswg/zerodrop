@@ -4,20 +4,21 @@ import (
 	"sort"
 	"time"
 
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 type ZerodropEntry struct {
-	UUID         string
-	URL          string
-	Redirect     bool
-	Creation     time.Time
-	AccessExpiry int
-	AccessCount  int
+	Name              string    // The request URI used to access this entry
+	URL               string    // The URL that this entry references
+	Redirect          bool      // Indicates whether to redirect instead of proxy
+	Creation          time.Time // The time this entry was created
+	AccessExpire      bool      // Indicates whether to expire after finite access
+	AccessExpireCount int       // The number of requests on this entry before expiry
+	AccessCount       int       // The number of times this has been accessed
 }
 
 func (e *ZerodropEntry) IsExpired() bool {
-	return e.AccessCount >= e.AccessExpiry
+	return e.AccessExpire && (e.AccessCount >= e.AccessExpireCount)
 }
 
 type ZerodropDB struct {
@@ -29,8 +30,8 @@ func (d *ZerodropDB) Connect() error {
 	return nil
 }
 
-func (d *ZerodropDB) Get(uuid string) (entry ZerodropEntry, ok bool) {
-	entry, ok = d.mapping[uuid]
+func (d *ZerodropDB) Get(name string) (entry ZerodropEntry, ok bool) {
+	entry, ok = d.mapping[name]
 	return
 }
 
@@ -52,32 +53,34 @@ func (d *ZerodropDB) List() []ZerodropEntry {
 	return list
 }
 
-func (d *ZerodropDB) Access(uuid string) (entry ZerodropEntry, ok bool) {
-	entry, ok = d.Get(uuid)
+func (d *ZerodropDB) Access(name string) (entry ZerodropEntry, ok bool) {
+	entry, ok = d.Get(name)
 
 	if ok {
 		updatedEntry := entry
 		updatedEntry.AccessCount++
-		d.mapping[uuid] = updatedEntry
+		d.mapping[name] = updatedEntry
 	}
 
 	return
 }
 
 func (d *ZerodropDB) Create(entry *ZerodropEntry) error {
-	id, err := uuid.NewV4()
-	if err != nil {
-		return err
+	if entry.Name == "" {
+		id, err := uuid.NewV4()
+		if err != nil {
+			return err
+		}
+		entry.Name = id.String()
 	}
 
-	entry.UUID = id.String()
-	d.mapping[entry.UUID] = *entry
+	d.mapping[entry.Name] = *entry
 
 	return nil
 }
 
-func (d *ZerodropDB) Remove(uuid string) {
-	delete(d.mapping, uuid)
+func (d *ZerodropDB) Remove(name string) {
+	delete(d.mapping, name)
 }
 
 func (d *ZerodropDB) Clear() {

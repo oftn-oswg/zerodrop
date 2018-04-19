@@ -8,14 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/dgrijalva/jwt-go"
 )
-
-type AdminClaims struct {
-	Admin bool `json:"admin"`
-	jwt.StandardClaims
-}
 
 // AdminHandler serves the administration page, or asks for credentials if not
 // already authenticated.
@@ -23,6 +16,7 @@ type AdminHandler struct {
 	DB        *ZerodropDB
 	Config    *ZerodropConfig
 	Templates *template.Template
+	Mux       *http.ServeMux
 }
 
 // NewAdminHandler creates a new admin handler with the specified configuration
@@ -30,6 +24,7 @@ type AdminHandler struct {
 func NewAdminHandler(db *ZerodropDB, config *ZerodropConfig) *AdminHandler {
 	handler := &AdminHandler{DB: db, Config: config}
 
+	// Load templates
 	var allFiles []string
 	files, err := ioutil.ReadDir("./templates")
 	if err != nil {
@@ -47,17 +42,30 @@ func NewAdminHandler(db *ZerodropDB, config *ZerodropConfig) *AdminHandler {
 		log.Fatal(err)
 	}
 
+	// Create ServeMux
+	handler.Mux = http.NewServeMux()
+	handler.Mux.HandleFunc("/new", handler.ServeNew)
+	handler.Mux.HandleFunc("/", handler.ServeMain)
+
 	return handler
 }
 
 type AdminPageData struct {
-	Error   string
-	Title   string
-	Config  *ZerodropConfig
-	Entries []ZerodropEntry
+	Error    string
+	Title    string
+	LoggedIn bool
+	Config   *ZerodropConfig
+	Entries  []ZerodropEntry
 }
 
-func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request, data *AdminPageData) {
+func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request) {
+	page := a.Config.Base + "admin/login"
+	if r.URL.Path != "/login" {
+		http.Redirect(w, r, page, 302)
+		return
+	}
+
+	data := &AdminPageData{Title: "Zerodrop Login", Config: a.Config}
 	loginTmpl := a.Templates.Lookup("admin-login.tmpl")
 	err := loginTmpl.ExecuteTemplate(w, "login", data)
 	if err != nil {
@@ -65,8 +73,51 @@ func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request, data *
 	}
 }
 
-func (a *AdminHandler) ServeInterface(w http.ResponseWriter, r *http.Request) {
-	log.Println("Access to " + r.URL.Path + " granted to IP " + RealRemoteAddr(r))
+func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		r.ParseForm()
+
+		creation := time.Now()
+
+		// Source information
+		url := r.FormValue("url")
+		redirect := r.FormValue("url_type") == "redirect"
+
+		// Access information
+		accessExpire := r.FormValue("access_expire") != ""
+		accessExpireCount, err := strconv.Atoi(r.FormValue("access_expire_count"))
+		if err != nil {
+			accessExpireCount = 0
+		}
+		accessBlacklist := r.FormValue("access_blacklist")
+
+		// Publish information
+		publish := r.FormValue("publish")
+
+		entry := &ZerodropEntry{
+			Name:              publish,
+			URL:               url,
+			Redirect:          redirect,
+			Creation:          creation,
+			AccessBlacklist:   accessBlacklist,
+			AccessExpire:      accessExpire,
+			AccessExpireCount: accessExpireCount,
+		}
+
+		http.Redirect(w, r, a.Config.Base+"admin/", 302)
+		return
+	}
+
+	data := &AdminPageData{Title: "Zerodrop New", LoggedIn: true, Config: a.Config}
+	loginTmpl := a.Templates.Lookup("admin-new.tmpl")
+	err := loginTmpl.ExecuteTemplate(w, "new", data)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
+	data := &AdminPageData{Title: "Zerodrop Admin", LoggedIn: true, Config: a.Config}
 
 	if r.Method == "POST" {
 		r.ParseForm()
@@ -107,46 +158,16 @@ func (a *AdminHandler) ServeInterface(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := &AdminPageData{}
-	data.Title = "Zerodrop Admin"
-	data.Config = a.Config
 	data.Entries = a.DB.List()
 
-	interfaceTmpl := a.Templates.Lookup("admin-interface.tmpl")
-	err := interfaceTmpl.ExecuteTemplate(w, "admin", data)
+	interfaceTmpl := a.Templates.Lookup("admin-main.tmpl")
+	err := interfaceTmpl.ExecuteTemplate(w, "main", data)
 	if err != nil {
 		log.Println(err)
 	}
 }
 
-// ServeHTTP generates the HTTP response.
 func (a *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	data := &AdminPageData{}
-	data.Title = "Zerodrop Login"
-	data.Config = a.Config
-
-	// Verify authentication
-	ok, err := VerifyRequestAuth(r, a.Config.AuthSecret)
-	if err != nil {
-		data.Error = "Could not verify authentication"
-		log.Println(err)
-	}
-
-	if ok {
-		a.ServeInterface(w, r)
-		return
-	}
-
-	// Validate authentication
-	if r.Method == "POST" {
-		err := ValidateRequestAuth(w, r, a.Config.AuthSecret, a.Config.AuthDigest)
-		if err == nil {
-			http.Redirect(w, r, a.Config.Base+"admin/", 302)
-		} else {
-			data.Error = err.Error()
-			log.Println(err)
-		}
-	}
-
-	a.ServeLogin(w, r, data)
+	log.Println("Access to " + r.URL.Path + " granted to IP " + RealRemoteAddr(r))
+	a.Mux.ServeHTTP(w, r)
 }

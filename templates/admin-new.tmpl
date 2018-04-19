@@ -1,5 +1,13 @@
-{{define "admin"}}
+{{define "new"}}
 {{- template "header" $ -}}
+        <ul class="nav nav-pills mb-3">
+            <li class="nav-item">
+                <a class="nav-link" href="{{$.Config.Base}}admin/">Entries</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="{{$.Config.Base}}admin/new">New</a>
+            </li>
+        </ul>
         <form method="post">
             <div class="card mb-3 zd_form_source">
                 <div class="card-header">
@@ -10,12 +18,12 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="file-tab" data-toggle="tab" href="#file" role="" aria-controls="file" aria-selected="false">
+                            <a class="nav-link disabled" id="file-tab" data-toggle="tab" href="#file" role="" aria-controls="file" aria-selected="false">
                                 <input id="zd_form_source_file" type="radio" name="source" hidden value="file" />File Upload
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="text-tab" data-toggle="tab" href="#text" role="" aria-controls="text" aria-selected="false">
+                            <a class="nav-link disabled" id="text-tab" data-toggle="tab" href="#text" role="" aria-controls="text" aria-selected="false">
                                 <input id="zd_form_source_text" type="radio" name="source" hidden value="text" />Textarea
                             </a>
                         </li>
@@ -91,7 +99,7 @@
                         <div class="input-group-prepend">
                             <label class="input-group-text" for="access_expire">Expire access to the page after</label>
                         </div>
-                        <input type="number" class="form-control" value="1" step="1" min="0" />
+                        <input name="access_expire_count" type="number" class="form-control" value="1" step="1" min="0" />
                         <div class="input-group-append">
                             <span class="input-group-text">request(s).</span>
                         </div>
@@ -109,7 +117,7 @@
                     <div class="form-group row">
                         <div class="input-group col-sm-10">
                             <div class="input-group-prepend">
-                                <span class="input-group-text">{{$.Config.Base}}</span>
+                                <span class="input-group-text">{{$.Config.Base | html}}</span>
                             </div>
                             <input type="text" name="publish" class="form-control" />
                             <div class="input-group-append">
@@ -117,62 +125,11 @@
                             </div>
                         </div>
                         <div class="col-sm-2">
-                            <button class="btn btn-primary btn-block">Publish</button>
+                            <button type="submit" class="btn btn-primary btn-block">Publish</button>
                         </div>
                     </div>
                 </div>
             </div>
         </form>
-    </div>
-
-
-<div class="admin-box">
-    <form method="post">
-        <div class="field">
-            <div class="field-value form-input-wrap"><input type="text" name="url" placeholder="https:// (URL)"/></div>
-        </div>
-        <div class="field-col">
-            <div class="field">
-                <label>
-                    <div class="field-name">Access Expiry Count:</div>
-                    <div class="field-value form-number-wrap"><input type="number" name="access_expiry" min="0" value="1"/></div>
-                </label>
-            </div>
-            <div class="field">
-                <label>
-                    <div class="field-name">Redirection:</div>
-                    <div class="field-value form-checkbox-wrap"><input type="checkbox" name="redirect"/></div>
-                </label>
-            </div>
-        </div>
-        <input type="hidden" name="action" value="add"/>
-        <input class="form-submit" type="submit" value="Create"/>
-    </form>
-</div>
-{{if .Entries}}
-<div class="admin-box">
-    <ul class="shotlist">
-        {{range .Entries}}
-            <li class="shot-entry{{if .Redirect}} shot-redirect{{end}}{{if ge .AccessCount .AccessExpiry}} shot-expired{{end}}">
-                <div class="shot-url"><a href="{{$.Config.Base}}{{.UUID}}">{{.URL}}</a></div>
-                <div class="shot-access">
-                    <span class="shot-count">{{.AccessCount}}</span> /
-                    <span class="shot-expire">{{.AccessExpiry}}</span>
-                </div>
-                <form method="post">
-                    <input type="hidden" name="uuid" value="{{.UUID}}"/>
-                    <input type="hidden" name="action" value="delete"/>
-                    <a href="#" onclick="this.parentNode.submit();return false;" class="shot-delete">[Delete]</a>
-                </form>
-            </li>
-        {{end}}
-    </ul>
-
-    <form method="post">
-        <input type="hidden" name="action" value="clear"/>
-        <input type="submit" value="Clear All Entries" class="form-submit"/>
-    </form>
-</div>
-{{end}}
 {{- template "footer" $ -}}
 {{end}}
