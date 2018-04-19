@@ -9,86 +9,51 @@
     </li>
 </ul>
 <div class="card mb-5">
+    {{if .Entries}}
     <ul class="list-group list-group-flush">
-        <li class="list-group-item">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-1 flex-grow-1">
-                    <a href="https://go.eligrey.com/t/70bcd839-cec7-4970-88d5-f2c77dfb1c8a">70bcd839-cec7-4970-88d5-f2c77dfb1c8a</a>
-                </h5>
-                <span title="Access attempts" class="badge badge-danger badge-pill mr-3">14/5</span>
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Actions
-                    </button>
-                    <div class="dropdown-menu">
-                        <a class="dropdown-item" href="#">View Blacklist</a>
-                        <a class="dropdown-item" href="#">Begin Blacklist Training</a>
-                        <div role="separator" class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="#">Delete</a>
+        {{range .Entries}}
+        <li class="list-group-item{{if .AccessTrain}} list-group-item-warning{{end}}">
+            <form method="post">
+                <input type="hidden" name="name" value="{{.Name}}"/>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-1 flex-grow-1">
+                        <a href="{{$.Config.Base}}{{.Name}}">{{.Name}}</a>
+                    </h5>
+                    <span title="Access attempts" class="badge badge-{{if and .AccessExpire (ge .AccessCount .AccessExpireCount)}}danger{{else}}secondary{{end}} badge-pill mr-3">{{.AccessCount}}{{if .AccessExpire}}/{{.AccessExpireCount}}{{end}}</span>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Actions
+                        </button>
+                        <div class="dropdown-menu">
+                            <h6 class="dropdown-header">Blacklist</h6>
+                            <button type="button" class="dropdown-item disabled">View</a>
+                            <button type="submit" name="action" value="train" class="dropdown-item">{{if .AccessTrain}}Stop{{else}}Start{{end}} Training</button>
+                            <div role="separator" class="dropdown-divider"></div>
+                            <button type="submit" name="action" value="delete" class="dropdown-item">Delete</a>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <p class="mb-1">
-                <small>
-                    Proxy of
-                    <a href="https://arxiv.org/ftp/arxiv/papers/1802/1802.07228.pdf">https://arxiv.org/ftp/arxiv/papers/1802/1802.07228.pdf</a>
-                </small>
-            </p>
+                <p class="mb-1">
+                    <small>
+                        <a href="{{.URL}}">{{.URL}}</a>
+                        ({{if .Redirect}}redirection{{else}}proxy{{end}})
+                    </small>
+                </p>
+            </form>
         </li>
-        <li class="list-group-item">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-1 flex-grow-1">
-                    <a href="https://go.eligrey.com/t/search">search</a>
-                </h5>
-                <span title="Access attempts" class="badge badge-secondary badge-pill mr-3">1/2</span>
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Actions
-                    </button>
-                    <div class="dropdown-menu">
-                        <a class="dropdown-item" href="#">View Blacklist</a>
-                        <a class="dropdown-item" href="#">Begin Blacklist Training</a>
-                        <div role="separator" class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="#">Delete</a>
-                    </div>
-                </div>
-            </div>
-            <p class="mb-1">
-                <small>
-                    Redirection to
-                    <a href="https://www.google.com/">https://www.google.com/</a>
-                </small>
-            </p>
-        </li>
-        <li class="list-group-item list-group-item-warning">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-1 flex-grow-1">
-                    <a href="https://go.eligrey.com/t/1bf52941-7210-4923-8a7a-af44bfb5a61e">1bf52941-7210-4923-8a7a-af44bfb5a61e</a>
-                </h5>
-                <span title="Access attempts" class="badge badge-secondary badge-pill mr-3">4</span>
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Actions
-                    </button>
-                    <div class="dropdown-menu">
-                        <a class="dropdown-item" href="#">View Blacklist</a>
-                        <a class="dropdown-item" href="#">End Blacklist Training</a>
-                        <div role="separator" class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="#">Delete</a>
-                    </div>
-                </div>
-            </div>
-            <p class="mb-1">
-                <small>
-                    Redirection to
-                    <a href="https://www.uuidgenerator.net/">https://www.uuidgenerator.net/</a>
-                </small>
-            </p>
-        </li>
+        {{end}}
     </ul>
+    {{else}}
+    <div class="card-body text-center">
+        <span>There are no entries here, but you can <a href="{{$.Config.Base}}admin/new">create an entry</a>.</span>
+    </div>
+    {{end}}
 
     <div class="card-footer">
-        <button type="button" class="btn btn-danger float-right">Clear all entries</button>
+        <form method="post">
+            <input type="hidden" name="action" value="clear" />
+            <button type="submit" class="btn btn-danger float-right">Clear all entries</button>
+        </form>
     </div>
 </div>
 {{template "footer" $}}

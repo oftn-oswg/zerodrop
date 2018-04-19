@@ -89,7 +89,7 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			accessExpireCount = 0
 		}
-		accessBlacklist := r.FormValue("access_blacklist")
+		accessBlacklist := ParseBlacklist(r.FormValue("access_blacklist"))
 
 		// Publish information
 		publish := r.FormValue("publish")
@@ -102,6 +102,10 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 			AccessBlacklist:   accessBlacklist,
 			AccessExpire:      accessExpire,
 			AccessExpireCount: accessExpireCount,
+		}
+
+		if err := a.DB.Create(entry); err == nil {
+			log.Printf("Added entry: %#v", entry)
 		}
 
 		http.Redirect(w, r, a.Config.Base+"admin/", 302)
@@ -123,29 +127,19 @@ func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 
 		switch r.FormValue("action") {
-		case "add":
-			accessExpiry, err := strconv.Atoi(r.FormValue("access_expiry"))
-			if err != nil {
-				accessExpiry = 0
-			}
 
-			entry := &ZerodropEntry{
-				URL:          r.FormValue("url"),
-				Redirect:     r.FormValue("redirect") != "",
-				Creation:     time.Now(),
-				AccessExpiry: accessExpiry,
-				AccessCount:  0,
-			}
-
-			if err := a.DB.Create(entry); err == nil {
-				log.Printf("Added entry: %#v", entry)
+		case "train":
+			name := r.FormValue("name")
+			entry, ok := a.DB.Get(name)
+			if ok {
+				a.DB.SetTraining(name, !entry.AccessTrain)
 			}
 
 		case "delete":
-			uuid := r.FormValue("uuid")
-			if uuid != "" {
-				a.DB.Remove(uuid)
-				log.Printf("Removed entry: %s", uuid)
+			name := r.FormValue("name")
+			if name != "" {
+				a.DB.Remove(name)
+				log.Printf("Removed entry: %s", name)
 			}
 
 		case "clear":
