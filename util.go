@@ -27,7 +27,7 @@ func ParseSocketName(value string) (string, string) {
 // RealRemoteAddr returns the value of the X-Real-IP header,
 // or the RemoteAddr property if the header does not exist.
 func RealRemoteAddr(r *http.Request) string {
-	if real := r.Header.Get("x-Real-IP"); real != "" {
+	if real := r.Header.Get("X-Real-IP"); real != "" {
 		return real
 	}
 	return r.RemoteAddr

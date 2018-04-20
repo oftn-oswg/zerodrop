@@ -3,6 +3,7 @@ package main
 import (
 	"net"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -10,15 +11,68 @@ type ZerodropBlacklistItem struct {
 	Negation bool
 	All      bool
 	Network  *net.IPNet
+	IP       net.IP
 	Hostname string
 	Regexp   *regexp.Regexp
 }
 
-type ZerodropBlacklist []*ZerodropBlacklistItem
+func (i ZerodropBlacklistItem) String() (value string) {
+	if i.Negation {
+		value += "!"
+	}
+
+	if i.All {
+		value += "*"
+		return
+	}
+
+	if i.Network != nil {
+		value += i.Network.String()
+		return
+	}
+
+	if i.IP != nil {
+		value += i.IP.String()
+		return
+	}
+
+	if i.Hostname != "" {
+		value += i.Hostname
+		return
+	}
+
+	if i.Regexp != nil {
+		value += "~"
+		value += i.Regexp.String()
+		return
+	}
+
+	return
+}
+
+type ZerodropBlacklist struct {
+	List []*ZerodropBlacklistItem
+}
+
+func (b ZerodropBlacklist) String() string {
+	items := make([]string, len(b.List)+1)
+	switch l := len(b.List); l {
+	case 0:
+		items[0] = "# Empty blacklist"
+	case 1:
+		items[0] = "# Blacklist with 1 item"
+	default:
+		items[0] = "# Blacklist with " + strconv.Itoa(l) + " items"
+	}
+	for index, item := range b.List {
+		items[index+1] = item.String()
+	}
+	return strings.Join(items, "\n")
+}
 
 func ParseBlacklist(text string) ZerodropBlacklist {
 	lines := strings.Split(text, "\n")
-	blacklist := ZerodropBlacklist{}
+	blacklist := ZerodropBlacklist{List: []*ZerodropBlacklistItem{}}
 
 	for _, line := range lines {
 		item := &ZerodropBlacklistItem{}
@@ -46,7 +100,7 @@ func ParseBlacklist(text string) ZerodropBlacklist {
 		// A line with only "*" matches everything
 		if line == "*" {
 			item.All = true
-			blacklist = append(blacklist, item)
+			blacklist.Add(item)
 			continue
 		}
 
@@ -65,36 +119,33 @@ func ParseBlacklist(text string) ZerodropBlacklist {
 		_, network, err := net.ParseCIDR(line)
 		if err == nil {
 			item.Network = network
-			blacklist = append(blacklist, item)
+			blacklist.Add(item)
 			continue
 		}
 
 		// If an IP address is given, parse as unique IP
 		if ip := net.ParseIP(line); ip != nil {
-			bits := len(ip) * 8
-			mask := net.CIDRMask(bits, bits)
-			if mask != nil {
-				item.Network = &net.IPNet{
-					IP:   ip,
-					Mask: mask,
-				}
-				blacklist = append(blacklist, item)
-				continue
-			}
+			item.IP = ip
+			blacklist.Add(item)
+			continue
 		}
 
 		// Otherwise, treat the pattern as a hostname.
 		item.Hostname = strings.ToLower(line)
-		blacklist = append(blacklist, item)
+		blacklist.Add(item)
 	}
 
 	return blacklist
 }
 
-func (b ZerodropBlacklist) Allow(ip net.IP) bool {
+func (b *ZerodropBlacklist) Add(item *ZerodropBlacklistItem) {
+	b.List = append(b.List, item)
+}
+
+func (b *ZerodropBlacklist) Allow(ip net.IP) bool {
 	allow := true
 
-	for _, item := range b {
+	for _, item := range b.List {
 		match := false
 
 		if item.All {
@@ -104,6 +155,10 @@ func (b ZerodropBlacklist) Allow(ip net.IP) bool {
 		} else if item.Network != nil {
 			// IP Network
 			match = item.Network.Contains(ip)
+
+		} else if item.IP != nil {
+			// IP Address
+			match = item.IP.Equal(ip)
 
 		} else if item.Hostname != "" {
 			// Hostname

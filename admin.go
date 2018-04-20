@@ -89,7 +89,7 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			accessExpireCount = 0
 		}
-		accessBlacklist := ParseBlacklist(r.FormValue("access_blacklist"))
+		accessBlacklist := ParseBlacklist(r.FormValue("blacklist"))
 
 		// Publish information
 		publish := r.FormValue("publish")
@@ -105,7 +105,7 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := a.DB.Create(entry); err == nil {
-			log.Printf("Added entry: %#v", entry)
+			log.Printf("Added entry: %s", entry)
 		}
 
 		http.Redirect(w, r, a.Config.Base+"admin/", 302)
@@ -132,7 +132,7 @@ func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
 			name := r.FormValue("name")
 			entry, ok := a.DB.Get(name)
 			if ok {
-				a.DB.SetTraining(name, !entry.AccessTrain)
+				entry.SetTraining(!entry.AccessTrain)
 			}
 
 		case "delete":

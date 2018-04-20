@@ -26,7 +26,7 @@
                         </button>
                         <div class="dropdown-menu">
                             <h6 class="dropdown-header">Blacklist</h6>
-                            <button type="button" class="dropdown-item disabled">View</a>
+                            <button type="button" class="dropdown-item" data-toggle="collapse" data-target="#blacklist-{{.Name}}" aria-expanded="false" aria-controls="blacklist-{{.Name}}">View</a>
                             <button type="submit" name="action" value="train" class="dropdown-item">{{if .AccessTrain}}Stop{{else}}Start{{end}} Training</button>
                             <div role="separator" class="dropdown-divider"></div>
                             <button type="submit" name="action" value="delete" class="dropdown-item">Delete</a>
@@ -40,6 +40,9 @@
                     </small>
                 </p>
             </form>
+            <div class="collapse" id="blacklist-{{.Name}}">
+                <div class="card card-body text-white bg-dark mt-3" style="white-space: pre">{{.AccessBlacklist}}</div>
+            </div>
         </li>
         {{end}}
     </ul>

@@ -1,13 +1,16 @@
 package main
 
 import (
+	"errors"
 	"sort"
+	"strconv"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
 )
 
 type ZerodropEntry struct {
+	db                *ZerodropDB
 	Name              string            // The request URI used to access this entry
 	URL               string            // The URL that this entry references
 	Redirect          bool              // Indicates whether to redirect instead of proxy
@@ -17,10 +20,6 @@ type ZerodropEntry struct {
 	AccessExpireCount int               // The number of requests on this entry before expiry
 	AccessCount       int               // The number of times this has been accessed
 	AccessTrain       bool              // Whether training is active
-}
-
-func (e *ZerodropEntry) IsExpired() bool {
-	return e.AccessExpire && (e.AccessCount >= e.AccessExpireCount)
 }
 
 // ZerodropDB represents a database connection.
@@ -37,17 +36,6 @@ func (d *ZerodropDB) Connect() error {
 func (d *ZerodropDB) Get(name string) (entry ZerodropEntry, ok bool) {
 	entry, ok = d.mapping[name]
 	return
-}
-
-func (d *ZerodropDB) SetTraining(name string, train bool) bool {
-	updatedEntry, ok := d.mapping[name]
-	if !ok {
-		return false
-	}
-
-	updatedEntry.AccessTrain = train
-	d.mapping[name] = updatedEntry
-	return true
 }
 
 // List returns a slice of all entries sorted by creation time,
@@ -68,19 +56,9 @@ func (d *ZerodropDB) List() []ZerodropEntry {
 	return list
 }
 
-func (d *ZerodropDB) Access(name string) (entry ZerodropEntry, ok bool) {
-	entry, ok = d.Get(name)
+func (db *ZerodropDB) Create(entry *ZerodropEntry) error {
+	entry.db = db
 
-	if ok {
-		updatedEntry := entry
-		updatedEntry.AccessCount++
-		d.mapping[name] = updatedEntry
-	}
-
-	return
-}
-
-func (d *ZerodropDB) Create(entry *ZerodropEntry) error {
 	if entry.Name == "" {
 		id, err := uuid.NewV4()
 		if err != nil {
@@ -89,8 +67,7 @@ func (d *ZerodropDB) Create(entry *ZerodropEntry) error {
 		entry.Name = id.String()
 	}
 
-	d.mapping[entry.Name] = *entry
-
+	db.mapping[entry.Name] = *entry
 	return nil
 }
 
@@ -100,4 +77,42 @@ func (d *ZerodropDB) Remove(name string) {
 
 func (d *ZerodropDB) Clear() {
 	d.Connect()
+}
+
+// IsExpired returns true if the entry is expired
+func (e *ZerodropEntry) IsExpired() bool {
+	return e.AccessExpire && (e.AccessCount >= e.AccessExpireCount)
+}
+
+func (e *ZerodropEntry) Update() error {
+	if e.db != nil {
+		return e.db.Create(e)
+	}
+	return errors.New("No link to DB")
+}
+
+// SetTraining sets the AccessTrain flag
+func (e *ZerodropEntry) SetTraining(train bool) error {
+	e.AccessTrain = train
+	return e.Update()
+}
+
+// Access increases the access count for an entry.
+func (e *ZerodropEntry) Access() error {
+	e.AccessCount++
+	return e.Update()
+}
+
+func (e *ZerodropEntry) String() string {
+	urltype := "proxy"
+	if e.Redirect {
+		urltype = "redirect"
+	}
+	access := strconv.Itoa(e.AccessCount)
+	if e.AccessExpire {
+		access += "/" + strconv.Itoa(e.AccessExpireCount)
+	}
+	return e.Name + " {" +
+		e.URL + " (" + urltype + ") " +
+		access + " " + e.AccessBlacklist.String() + "}"
 }
