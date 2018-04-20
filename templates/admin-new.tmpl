@@ -107,7 +107,8 @@
                     <div class="form-group row">
                         <label for="access_blacklist" class="col-sm-2 col-form-label">Blacklist</label>
                         <div class="col-sm-10">
-                            <textarea class="form-control" id="access_blacklist" name="blacklist" rows="3"></textarea>
+                            <textarea class="form-control bg-dark text-white" id="access_blacklist" name="blacklist" rows="3"># Empty blacklist
+</textarea>
                         </div>
                     </div>
                 </div>
@@ -119,9 +120,9 @@
                             <div class="input-group-prepend">
                                 <span class="input-group-text">{{$.Config.Base | html}}</span>
                             </div>
-                            <input type="text" name="publish" class="form-control" />
+                            <input type="text" id="publish" name="publish" class="form-control" />
                             <div class="input-group-append">
-                                <button type="button" class="btn btn-outline-secondary">Generate UUID</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="uuid()">Generate UUID</button>
                             </div>
                         </div>
                         <div class="col-sm-2">
@@ -131,5 +132,13 @@
                 </div>
             </div>
         </form>
+<script>
+function uuid() {
+    document.getElementById('publish').value = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+</script>
 {{- template "footer" $ -}}
 {{end}}
