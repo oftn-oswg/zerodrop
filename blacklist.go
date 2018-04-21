@@ -94,7 +94,7 @@ func ParseBlacklist(text string) ZerodropBlacklist {
 		// will become included again.
 		if line[0] == '!' {
 			item.Negation = true
-			line = line[1:]
+			line = strings.TrimSpace(line[1:])
 		}
 
 		// A line with only "*" matches everything

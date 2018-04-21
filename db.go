@@ -10,16 +10,17 @@ import (
 )
 
 type ZerodropEntry struct {
-	db                *ZerodropDB
-	Name              string            // The request URI used to access this entry
-	URL               string            // The URL that this entry references
-	Redirect          bool              // Indicates whether to redirect instead of proxy
-	Creation          time.Time         // The time this entry was created
-	AccessBlacklist   ZerodropBlacklist // Blacklist
-	AccessExpire      bool              // Indicates whether to expire after finite access
-	AccessExpireCount int               // The number of requests on this entry before expiry
-	AccessCount       int               // The number of times this has been accessed
-	AccessTrain       bool              // Whether training is active
+	db                   *ZerodropDB
+	Name                 string            // The request URI used to access this entry
+	URL                  string            // The URL that this entry references
+	Redirect             bool              // Indicates whether to redirect instead of proxy
+	Creation             time.Time         // The time this entry was created
+	AccessBlacklist      ZerodropBlacklist // Blacklist
+	AccessBlacklistCount int               // Number of requests that have been caught by the blacklist
+	AccessExpire         bool              // Indicates whether to expire after finite access
+	AccessExpireCount    int               // The number of requests on this entry before expiry
+	AccessCount          int               // The number of times this has been accessed
+	AccessTrain          bool              // Whether training is active
 }
 
 // ZerodropDB represents a database connection.

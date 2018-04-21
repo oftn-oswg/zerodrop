@@ -20,13 +20,7 @@ type ShotHandler struct {
 func (a *ShotHandler) DetermineAccess(entry *ZerodropEntry, ip net.IP) bool {
 	if entry.AccessTrain {
 		// We need to add the ip to the blacklist
-		bits := len(ip) * 8
-		item := &ZerodropBlacklistItem{
-			Network: &net.IPNet{
-				IP:   ip,
-				Mask: net.CIDRMask(bits, bits),
-			},
-		}
+		item := &ZerodropBlacklistItem{IP: ip}
 		entry.AccessBlacklist.Add(item)
 		if err := entry.Update(); err != nil {
 			log.Printf("Error adding to blacklist: %s", err.Error())
@@ -60,6 +54,10 @@ func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	name := strings.Trim(r.URL.Path, "/")
 	entry, ok := a.DB.Get(name)
 	if !ok || ip == nil || !a.DetermineAccess(&entry, ip) {
+		if ok {
+			entry.AccessBlacklistCount++
+			entry.Update()
+		}
 		a.NotFound.ServeHTTP(w, r)
 		return
 	}

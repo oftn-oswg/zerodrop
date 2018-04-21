@@ -107,7 +107,29 @@
                     <div class="form-group row">
                         <label for="access_blacklist" class="col-sm-2 col-form-label">Blacklist</label>
                         <div class="col-sm-10">
-                            <textarea class="form-control bg-dark text-white" id="access_blacklist" name="blacklist" rows="3"># Empty blacklist
+                            <textarea class="form-control bg-dark text-white" style="font-family: Consolas, Lucida Console, monospace;" id="access_blacklist" name="blacklist" rows="6"># Empty blacklist
+# The blacklist syntax is similar to that of .gitignore.
+# An optional prefix ! which negates the pattern can be used for whitelisting.
+# For example to only allow from local:
+#     * # First blacklist everyone
+#     ! ::1 # Whitelist localhost
+#
+# An optional prefix @ is for targeted geofencing: @ lat lng (optional radius)
+# For example to block Atlantic City:
+#     @ 39.377297 -74.451082 (7km)
+# The default radius is 25m.
+#
+# [Unit]    [Symbol]
+# meter     m
+# kilometer km
+# mile      mi
+# feet      ft
+#
+# An optional prefix ~ indicates a hostname regular expression match.
+#     For example: ~ (.*)\.shady\.com
+# Use CIDR notation to denote a network: 192.168.2.0/24
+# Or just list the IP address to block: 192.168.2.6
+# Or just use a simple hostname match: www.google.com
 </textarea>
                         </div>
                     </div>
