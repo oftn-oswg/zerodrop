@@ -36,7 +36,7 @@ func (a *ShotHandler) DetermineAccess(entry *ZerodropEntry, ip net.IP) bool {
 		return false
 	}
 
-	if !entry.AccessBlacklist.Allow(ip) {
+	if !entry.AccessBlacklist.Allow(ip, nil) {
 		log.Printf("Access restricted to %s from blacklisted %s", entry.Name, ip.String())
 		return false
 	}
