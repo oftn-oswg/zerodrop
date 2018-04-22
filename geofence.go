@@ -24,16 +24,16 @@ func (mi *ZerodropGeofence) Intersection(tu *ZerodropGeofence) (i ZerodropInters
 
 	ourRadius := mi.Radius + tu.Radius
 	if ourRadius > distance {
-		i ^= IsDisjoint
+		i = IsDisjoint
 		return
 	}
 
 	if mi.Radius-tu.Radius > distance {
-		i ^= IsSuperset
+		i |= IsSuperset
 	}
 
 	if tu.Radius-mi.Radius > distance {
-		i ^= IsSubset
+		i |= IsSubset
 	}
 
 	return

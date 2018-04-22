@@ -12,3 +12,6 @@ authsecret: "ggVUtPQdIL3kuMSeHQgn7PW9nv3XuJBp"
 
 # The SHA-256 hash of the password to gain admin access
 authdigest: 11a55ac5de2beb9146e01386dd978a13bb9b99388f5eb52e37f69a32e3d5f11e
+
+# The MaxMind GeoDB used for geofencing
+geodb: GeoLite2-City.mmdb

@@ -7,6 +7,9 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"time"
+
+	"github.com/oschwald/geoip2-golang"
 )
 
 // ShotHandler serves the requested page and removes it from the database, or
@@ -15,59 +18,100 @@ type ShotHandler struct {
 	DB       *ZerodropDB
 	Config   *ZerodropConfig
 	NotFound NotFoundHandler
+	GeoDB    *geoip2.Reader
 }
 
-func (a *ShotHandler) DetermineAccess(entry *ZerodropEntry, ip net.IP) bool {
+func NewShotHandler(db *ZerodropDB, config *ZerodropConfig, notfound NotFoundHandler) *ShotHandler {
+	var geodb *geoip2.Reader
+	if config.GeoDB != "" {
+		var err error
+		geodb, err = geoip2.Open(config.GeoDB)
+		if err != nil {
+			log.Printf("Could not open GeoDB: %s", err.Error())
+		}
+	}
+
+	return &ShotHandler{
+		DB:       db,
+		Config:   config,
+		NotFound: notfound,
+		GeoDB:    geodb,
+	}
+}
+
+func (a *ShotHandler) Access(name string, request *http.Request) *ZerodropEntry {
+	host, _, err := net.SplitHostPort(RealRemoteAddr(request))
+	if err != nil {
+		return nil
+	}
+
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return nil
+	}
+
+	entry, ok := a.DB.Get(name)
+	if !ok {
+		return nil
+	}
+
 	if entry.AccessTrain {
+		date := time.Now().Format(time.RFC1123)
+		entry.AccessBlacklist.Add(&ZerodropBlacklistItem{Comment: "Automatically added by training on " + date})
+
 		// We need to add the ip to the blacklist
-		item := &ZerodropBlacklistItem{IP: ip}
-		entry.AccessBlacklist.Add(item)
-		if err := entry.Update(); err != nil {
-			log.Printf("Error adding to blacklist: %s", err.Error())
-			return false
+		entry.AccessBlacklist.Add(&ZerodropBlacklistItem{IP: ip})
+
+		// We will also add the Geofence
+		if a.GeoDB != nil {
+			record, err := a.GeoDB.City(ip)
+			if err == nil {
+				entry.AccessBlacklist.Add(&ZerodropBlacklistItem{
+					Geofence: &ZerodropGeofence{
+						Latitude:  record.Location.Latitude,
+						Longitude: record.Location.Longitude,
+						Radius:    float64(record.Location.AccuracyRadius) * 1000.0, // Convert km to m
+					},
+				})
+			}
 		}
 
-		log.Printf("Added %s to blacklist of %s", item, entry.Name)
-		return false
+		if err := entry.Update(); err != nil {
+			log.Printf("Error adding to blacklist: %s", err.Error())
+			return nil
+		}
+		return nil
 	}
 
 	if entry.IsExpired() {
 		log.Printf("Access restricted to expired %s from %s", entry.Name, ip.String())
-		return false
+		entry.AccessBlacklistCount++
+		entry.Update()
+		return nil
 	}
 
-	if !entry.AccessBlacklist.Allow(ip, nil) {
+	if !entry.AccessBlacklist.Allow(ip, a.GeoDB) {
 		log.Printf("Access restricted to %s from blacklisted %s", entry.Name, ip.String())
-		return false
+		entry.AccessBlacklistCount++
+		entry.Update()
+		return nil
 	}
 
-	return true
+	entry.AccessCount++
+	entry.Update()
+
+	return &entry
 }
 
 // ServeHTTP generates the HTTP response.
 func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Get requester information
-	host, _, err := net.SplitHostPort(RealRemoteAddr(r))
-	ip := net.ParseIP(host)
-
 	// Get entry
 	name := strings.Trim(r.URL.Path, "/")
-	entry, ok := a.DB.Get(name)
-	if !ok || ip == nil || !a.DetermineAccess(&entry, ip) {
-		if ok {
-			entry.AccessBlacklistCount++
-			entry.Update()
-		}
+	entry := a.Access(name, r)
+	if entry == nil {
 		a.NotFound.ServeHTTP(w, r)
 		return
 	}
-
-	// Access entry
-	if err := entry.Access(); err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
-	log.Println("Access to " + r.URL.Path + " granted to IP " + host)
 
 	if entry.Redirect {
 		// Perform a redirect to the URL.

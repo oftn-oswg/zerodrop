@@ -20,6 +20,8 @@ type ZerodropConfig struct {
 	Base       string `default:"/"`
 	AuthSecret string `default:"ggVUtPQdIL3kuMSeHQgn7PW9nv3XuJBp"`
 	AuthDigest string `default:"11a55ac5de2beb9146e01386dd978a13bb9b99388f5eb52e37f69a32e3d5f11e"`
+
+	GeoDB string
 }
 
 func main() {
@@ -91,6 +93,6 @@ func main() {
 
 	http.Handle("/admin/", http.StripPrefix("/admin", authHandler))
 	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("static"))))
-	http.Handle("/", &ShotHandler{DB: &db, Config: &config, NotFound: notfound})
+	http.Handle("/", NewShotHandler(&db, &config, notfound))
 	http.Serve(socket, nil)
 }
