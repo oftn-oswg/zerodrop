@@ -22,6 +22,10 @@ type ZerodropConfig struct {
 	AuthDigest string `default:"11a55ac5de2beb9146e01386dd978a13bb9b99388f5eb52e37f69a32e3d5f11e"`
 
 	GeoDB string
+
+	UploadDirectory   string `default:"."`
+	UploadPermissions uint32 `default:"0600"`
+	UploadMaxSize     uint64 `default:"1000000"`
 }
 
 func main() {

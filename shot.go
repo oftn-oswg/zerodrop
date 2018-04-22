@@ -1,11 +1,14 @@
 package main
 
 import (
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -45,7 +48,7 @@ func (a *ShotHandler) Access(name string, request *http.Request) *ZerodropEntry 
 
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
-		log.Printf("Could not parse remote address and port: %s: %s", addr, err.Error())
+		log.Printf("Could not parse remote address and port: %s", err.Error())
 		return nil
 	}
 
@@ -122,6 +125,27 @@ func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Granted access to %s to %s", strconv.Quote(entry.Name), RealRemoteAddr(r))
 
+	// File Upload
+	if entry.URL == "" {
+		contentType := entry.ContentType
+		if contentType == "" {
+			contentType = "text/plain"
+		}
+
+		fullpath := filepath.Join(a.Config.UploadDirectory, entry.Filename)
+		file, err := os.Open(fullpath)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		defer file.Close()
+
+		w.Header().Set("Content-Type", contentType)
+		io.Copy(w, file)
+		return
+	}
+
+	// URL redirect
 	if entry.Redirect {
 		// Perform a redirect to the URL.
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
@@ -129,7 +153,7 @@ func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Perform a proxying
+	// URL proxy
 	target, err := url.Parse(entry.URL)
 	if err != nil {
 		http.Error(w, "Could not parse URL", 500)

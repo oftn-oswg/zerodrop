@@ -5,14 +5,14 @@ import (
 	"sort"
 	"strconv"
 	"time"
-
-	uuid "github.com/satori/go.uuid"
 )
 
 type ZerodropEntry struct {
 	db                   *ZerodropDB
 	Name                 string            // The request URI used to access this entry
 	URL                  string            // The URL that this entry references
+	Filename             string            // The location of the file in the uploads directory
+	ContentType          string            // The MIME type to serve as Content-Type header
 	Redirect             bool              // Indicates whether to redirect instead of proxy
 	Creation             time.Time         // The time this entry was created
 	AccessBlacklist      ZerodropBlacklist // Blacklist
@@ -59,15 +59,6 @@ func (d *ZerodropDB) List() []ZerodropEntry {
 
 func (db *ZerodropDB) Create(entry *ZerodropEntry) error {
 	entry.db = db
-
-	if entry.Name == "" {
-		id, err := uuid.NewV4()
-		if err != nil {
-			return err
-		}
-		entry.Name = id.String()
-	}
-
 	db.mapping[entry.Name] = *entry
 	return nil
 }

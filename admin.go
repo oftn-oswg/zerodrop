@@ -2,12 +2,18 @@ package main
 
 import (
 	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	uuid "github.com/satori/go.uuid"
 )
 
 // AdminHandler serves the administration page, or asks for credentials if not
@@ -75,34 +81,89 @@ func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request) {
 
 func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
-		r.ParseForm()
-
-		creation := time.Now()
-
-		// Source information
-		url := r.FormValue("url")
-		redirect := r.FormValue("url_type") == "redirect"
-
-		// Access information
-		accessExpire := r.FormValue("access_expire") != ""
-		accessExpireCount, err := strconv.Atoi(r.FormValue("access_expire_count"))
+		err := r.ParseMultipartForm(int64(a.Config.UploadMaxSize))
 		if err != nil {
-			accessExpireCount = 0
+			http.Error(w, err.Error(), 500)
+			return
 		}
-		accessBlacklist := ParseBlacklist(r.FormValue("blacklist"))
+
+		entry := &ZerodropEntry{Creation: time.Now()}
 
 		// Publish information
-		publish := r.FormValue("publish")
-
-		entry := &ZerodropEntry{
-			Name:              publish,
-			URL:               url,
-			Redirect:          redirect,
-			Creation:          creation,
-			AccessBlacklist:   accessBlacklist,
-			AccessExpire:      accessExpire,
-			AccessExpireCount: accessExpireCount,
+		entry.Name = r.FormValue("publish")
+		if entry.Name == "" {
+			id, err := uuid.NewV4()
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			entry.Name = id.String()
 		}
+
+		// Source information
+		switch source := r.FormValue("source"); source {
+		case "url":
+			entry.URL = r.FormValue("url")
+			entry.Redirect = r.FormValue("url_type") == "redirect"
+
+		case "file":
+			file, _, err := r.FormFile("file")
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			defer file.Close()
+
+			filename := url.PathEscape(entry.Name)
+			fullpath := filepath.Join(a.Config.UploadDirectory, filename)
+
+			perms := os.FileMode(a.Config.UploadPermissions)
+			out, err := os.OpenFile(fullpath, os.O_WRONLY|os.O_CREATE, perms)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			defer out.Close()
+
+			_, err = io.Copy(out, file)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+
+			entry.Filename = filename
+			entry.ContentType = r.FormValue("file_type")
+
+		case "text":
+			filename := url.PathEscape(entry.Name)
+			fullpath := filepath.Join(a.Config.UploadDirectory, filename)
+
+			perms := os.FileMode(a.Config.UploadPermissions)
+			out, err := os.OpenFile(fullpath, os.O_WRONLY|os.O_CREATE, perms)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			defer out.Close()
+
+			_, err = io.WriteString(out, r.FormValue("text"))
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+
+			entry.Filename = filename
+			entry.ContentType = r.FormValue("text_type")
+
+		default:
+			http.Error(w, "Source selection must be url, file, or text", 500)
+			return
+		}
+
+		// Access information
+		entry.AccessExpire = r.FormValue("access_expire") != ""
+		entry.AccessExpireCount, _ = strconv.Atoi(r.FormValue("access_expire_count"))
+		entry.AccessBlacklist = ParseBlacklist(r.FormValue("blacklist"))
 
 		if err := a.DB.Create(entry); err == nil {
 			log.Printf("Created entry %s", entry)

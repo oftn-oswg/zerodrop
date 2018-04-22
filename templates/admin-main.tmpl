@@ -34,12 +34,14 @@
                         </div>
                     </div>
                 </div>
+                {{if ne .URL "" }}
                 <p class="mb-1">
                     <small>
                         <a href="{{.URL}}">{{.URL}}</a>
                         ({{if .Redirect}}redirection{{else}}proxy{{end}})
                     </small>
                 </p>
+                {{end}}
             </form>
             <div class="collapse" id="blacklist-{{.Name}}">
                 <div class="card card-body text-white bg-dark mt-3" style="white-space: pre">{{.AccessBlacklist}}</div>
