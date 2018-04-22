@@ -113,7 +113,7 @@ func (e *ZerodropEntry) String() string {
 	if e.AccessExpire {
 		access += "/" + strconv.Itoa(e.AccessExpireCount)
 	}
-	return e.Name + " {" +
+	return strconv.Quote(e.Name) + " {" +
 		e.URL + " (" + urltype + ") " +
 		access + " " + e.AccessBlacklist.String() + "}"
 }

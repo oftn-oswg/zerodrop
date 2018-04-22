@@ -105,7 +105,7 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := a.DB.Create(entry); err == nil {
-			log.Printf("Added entry: %s", entry)
+			log.Printf("Created entry %s", entry)
 		}
 
 		http.Redirect(w, r, a.Config.Base+"admin/", 302)

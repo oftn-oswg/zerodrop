@@ -41,13 +41,17 @@ func NewShotHandler(db *ZerodropDB, config *ZerodropConfig, notfound NotFoundHan
 }
 
 func (a *ShotHandler) Access(name string, request *http.Request) *ZerodropEntry {
-	host, _, err := net.SplitHostPort(RealRemoteAddr(request))
+	addr := RealRemoteAddr(request)
+
+	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
+		log.Printf("Could not parse remote address and port: %s: %s", addr, err.Error())
 		return nil
 	}
 
 	ip := net.ParseIP(host)
 	if ip == nil {
+		log.Printf("Could not parse IP address: %s", host)
 		return nil
 	}
 
