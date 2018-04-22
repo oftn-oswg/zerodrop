@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"time"
@@ -38,10 +39,12 @@ func (a *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := a.validate(w, r)
 
 		if err == nil {
+			log.Println("Successful authentication by " + RealRemoteAddr(r))
 			if a.SuccessRedirect != "" {
 				redirect = a.SuccessRedirect
 			}
 		} else {
+			log.Println("Failed authentication by " + RealRemoteAddr(r))
 			if a.FailureRedirect != "" {
 				redirect = a.FailureRedirect
 			}

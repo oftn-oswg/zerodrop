@@ -162,6 +162,5 @@ func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println("Access to " + r.URL.Path + " granted to IP " + RealRemoteAddr(r))
 	a.Mux.ServeHTTP(w, r)
 }

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -108,10 +109,14 @@ func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Get entry
 	name := strings.Trim(r.URL.Path, "/")
 	entry := a.Access(name, r)
+
 	if entry == nil {
+		log.Printf("Denied access to %s to %s", strconv.Quote(name), RealRemoteAddr(r))
 		a.NotFound.ServeHTTP(w, r)
 		return
 	}
+
+	log.Printf("Granted access to %s to %s", strconv.Quote(entry.Name), RealRemoteAddr(r))
 
 	if entry.Redirect {
 		// Perform a redirect to the URL.
