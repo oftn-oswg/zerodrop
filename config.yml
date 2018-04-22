@@ -15,3 +15,12 @@ authdigest: 11a55ac5de2beb9146e01386dd978a13bb9b99388f5eb52e37f69a32e3d5f11e
 
 # The MaxMind GeoDB used for geofencing
 geodb: GeoLite2-City.mmdb
+
+# The directory to upload files to
+uploaddirectory: .
+
+# The permissions to set for file uploads
+uploadpermissions: 0600
+
+# The maximum form and file upload size in bytes
+uploadmaxsize: 1000000

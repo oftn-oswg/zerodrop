@@ -1,11 +1,12 @@
 # Zerodrop
 
-A utility for private redirects and proxies that disappear after being used once.
+A utility for private redirects and proxies that disappear after being used once. 
 
 ## Features
 
 * Web interface for creating resources
 * Create proxies and redirections for a given URL
+* Upload files or manually enter content in a textarea
 * Access control
 * Expire access to a resource after number of downloads
 * Block or allow access based on IP address
@@ -13,11 +14,6 @@ A utility for private redirects and proxies that disappear after being used once
 * Block or allow access based on GeoIP location
 * Block or allow access based on hostname matching (w/ regex)
 * Publish "secret" pages with UUID generation
-
-## Coming soon
-
-* File upload
-* Textarea
 
 ## Blacklist
 
