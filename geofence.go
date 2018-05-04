@@ -4,20 +4,27 @@ import (
 	"github.com/kellydunn/golang-geo"
 )
 
-type ZerodropGeofence struct {
+// Geofence represents a point on the Earth with an accuracy radius.
+type Geofence struct {
 	Latitude, Longitude, Radius float64
 }
 
-type ZerodropIntersection uint
+// SetIntersection is a description of the relationship between two sets.
+type SetIntersection uint
 
 const (
-	IsDisjoint ZerodropIntersection = 1 << iota
+	// IsDisjoint means that the two sets have no common elements.
+	IsDisjoint SetIntersection = 1 << iota
+
+	// IsSubset means the first set is a subset of the second.
 	IsSubset
+
+	// IsSuperset means the second set is a subset of the first.
 	IsSuperset
 )
 
-// Intersection gets the intersection data for two points with accuracy radius
-func (mi *ZerodropGeofence) Intersection(tu *ZerodropGeofence) (i ZerodropIntersection) {
+// Intersection describes the relationship between two geofences
+func (mi *Geofence) Intersection(tu *Geofence) (i SetIntersection) {
 	miPoint := geo.NewPoint(mi.Latitude, mi.Longitude)
 	tuPoint := geo.NewPoint(tu.Latitude, tu.Longitude)
 	distance := miPoint.GreatCircleDistance(tuPoint) * 1000

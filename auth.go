@@ -14,16 +14,19 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
+// AuthCredentials represents the secrets required to maintain authentication.
 type AuthCredentials struct {
 	Digest string
 	Secret []byte
 }
 
+// AuthClaims represents the claims of the JWT (JSON Web Token)
 type AuthClaims struct {
 	Auth bool `json:"admin"`
 	jwt.StandardClaims
 }
 
+// AuthHandler wraps another handler with authentication methods and requirements.
 type AuthHandler struct {
 	Success         http.Handler
 	Failure         http.Handler

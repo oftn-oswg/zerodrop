@@ -13,8 +13,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/client9/ipcat"
+
 	"github.com/oschwald/geoip2-golang"
 )
+
+var headerCacheControl = "no-cache, no-store, must-revalidate"
 
 // ShotHandler serves the requested page and removes it from the database, or
 // returns 404 page if not available.
@@ -22,16 +26,32 @@ type ShotHandler struct {
 	DB       *ZerodropDB
 	Config   *ZerodropConfig
 	NotFound NotFoundHandler
-	GeoDB    *geoip2.Reader
+	Context  *BlacklistContext
 }
 
+// NewShotHandler constructs a new ShotHandler from the arguments.
 func NewShotHandler(db *ZerodropDB, config *ZerodropConfig, notfound NotFoundHandler) *ShotHandler {
 	var geodb *geoip2.Reader
 	if config.GeoDB != "" {
 		var err error
 		geodb, err = geoip2.Open(config.GeoDB)
 		if err != nil {
-			log.Printf("Could not open GeoDB: %s", err.Error())
+			log.Printf("Could not open geolocation database: %s", err.Error())
+		}
+	}
+
+	var ipset *ipcat.IntervalSet
+	if config.IPCat != "" {
+		reader, err := os.Open(config.IPCat)
+		if err != nil {
+			log.Printf("Could not open ipcat database: %s", err.Error())
+		} else {
+			ipset = ipcat.NewIntervalSet(4096)
+			err := ipset.ImportCSV(reader)
+			if err != nil {
+				log.Printf("Could not import ipcat database: %s", err.Error())
+				ipset = nil
+			}
 		}
 	}
 
@@ -39,10 +59,15 @@ func NewShotHandler(db *ZerodropDB, config *ZerodropConfig, notfound NotFoundHan
 		DB:       db,
 		Config:   config,
 		NotFound: notfound,
-		GeoDB:    geodb,
+		Context: &BlacklistContext{
+			GeoDB: geodb,
+			IPSet: ipset,
+		},
 	}
 }
 
+// Access returns the ZerodropEntry with the specified name as long as access
+// is permitted. The function returns nil otherwise.
 func (a *ShotHandler) Access(name string, request *http.Request) *ZerodropEntry {
 	addr := RealRemoteAddr(request)
 
@@ -65,17 +90,17 @@ func (a *ShotHandler) Access(name string, request *http.Request) *ZerodropEntry 
 
 	if entry.AccessTrain {
 		date := time.Now().Format(time.RFC1123)
-		entry.AccessBlacklist.Add(&ZerodropBlacklistItem{Comment: "Automatically added by training on " + date})
+		entry.AccessBlacklist.Add(&BlacklistRule{Comment: "Automatically added by training on " + date})
 
 		// We need to add the ip to the blacklist
-		entry.AccessBlacklist.Add(&ZerodropBlacklistItem{IP: ip})
+		entry.AccessBlacklist.Add(&BlacklistRule{IP: ip})
 
 		// We will also add the Geofence
-		if a.GeoDB != nil {
-			record, err := a.GeoDB.City(ip)
+		if a.Context.GeoDB != nil {
+			record, err := a.Context.GeoDB.City(ip)
 			if err == nil {
-				entry.AccessBlacklist.Add(&ZerodropBlacklistItem{
-					Geofence: &ZerodropGeofence{
+				entry.AccessBlacklist.Add(&BlacklistRule{
+					Geofence: &Geofence{
 						Latitude:  record.Location.Latitude,
 						Longitude: record.Location.Longitude,
 						Radius:    float64(record.Location.AccuracyRadius) * 1000.0, // Convert km to m
@@ -98,7 +123,7 @@ func (a *ShotHandler) Access(name string, request *http.Request) *ZerodropEntry 
 		return nil
 	}
 
-	if !entry.AccessBlacklist.Allow(ip, a.GeoDB) {
+	if !entry.AccessBlacklist.Allow(a.Context, ip) {
 		log.Printf("Access restricted to %s from blacklisted %s", entry.Name, ip.String())
 		entry.AccessBlacklistCount++
 		entry.Update()
@@ -141,6 +166,7 @@ func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer file.Close()
 
 		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Cache-Control", headerCacheControl)
 		io.Copy(w, file)
 		return
 	}
@@ -148,7 +174,7 @@ func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// URL redirect
 	if entry.Redirect {
 		// Perform a redirect to the URL.
-		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Cache-Control", headerCacheControl)
 		http.Redirect(w, r, entry.URL, 307)
 		return
 	}
@@ -170,7 +196,7 @@ func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		},
 		ModifyResponse: func(res *http.Response) error {
-			res.Header.Set("Cache-Control", "no-cache, no-store, must-revalidate")
+			w.Header().Set("Cache-Control", headerCacheControl)
 			return nil
 		},
 	}

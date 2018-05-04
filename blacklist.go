@@ -8,10 +8,21 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/client9/ipcat"
 	"github.com/oschwald/geoip2-golang"
 )
 
-type ZerodropBlacklistItem struct {
+// BlacklistContext is a structure used to contain the external data
+// used to categorize IP addresses needed for specific rules, like
+// the geolocation database used for geofencing or the ipcat database.
+type BlacklistContext struct {
+	GeoDB *geoip2.Reader
+	IPSet *ipcat.IntervalSet
+}
+
+// BlacklistRule is a structure that represents a rule or comment as part
+// of a blacklist.
+type BlacklistRule struct {
 	Comment  string
 	Negation bool
 	All      bool
@@ -19,10 +30,11 @@ type ZerodropBlacklistItem struct {
 	IP       net.IP
 	Hostname string
 	Regexp   *regexp.Regexp
-	Geofence *ZerodropGeofence
+	Geofence *Geofence
+	IPCat    string
 }
 
-func (i ZerodropBlacklistItem) String() (value string) {
+func (i BlacklistRule) String() (value string) {
 	if i.Negation {
 		value += "!"
 	}
@@ -61,6 +73,10 @@ func (i ZerodropBlacklistItem) String() (value string) {
 		return
 	}
 
+	if i.IPCat != "" {
+		value += "ipcat " + i.IPCat
+	}
+
 	if i.Comment != "" {
 		value += "# " + i.Comment
 	}
@@ -68,11 +84,12 @@ func (i ZerodropBlacklistItem) String() (value string) {
 	return
 }
 
-type ZerodropBlacklist struct {
-	List []*ZerodropBlacklistItem
+// Blacklist is a list of BlacklistRules
+type Blacklist struct {
+	List []*BlacklistRule
 }
 
-func (b ZerodropBlacklist) String() string {
+func (b Blacklist) String() string {
 	itemCount := 0
 
 	// Stringify items
@@ -106,9 +123,10 @@ var geofenceUnits = map[string]float64{
 	"ft": 1609.0 / 5280.0,
 }
 
-func ParseBlacklist(text string) ZerodropBlacklist {
+// ParseBlacklist parses a text blacklist and returns a Blacklist object.
+func ParseBlacklist(text string) Blacklist {
 	lines := strings.Split(text, "\n")
-	blacklist := ZerodropBlacklist{List: []*ZerodropBlacklistItem{}}
+	blacklist := Blacklist{List: []*BlacklistRule{}}
 
 	for _, line := range lines {
 		// A line with # serves as a comment.
@@ -123,7 +141,7 @@ func ParseBlacklist(text string) ZerodropBlacklist {
 			continue
 		}
 
-		item := &ZerodropBlacklistItem{}
+		item := &BlacklistRule{}
 
 		// An optional prefix "!" which negates the pattern;
 		// any matching address/host excluded by a previous pattern
@@ -137,6 +155,14 @@ func ParseBlacklist(text string) ZerodropBlacklist {
 		// allowing the creation of a whitelist.
 		if line == "*" {
 			item.All = true
+			blacklist.Add(item)
+			continue
+		}
+
+		// IPCat database query match
+		if line[:6] == "ipcat " {
+			ipcat := strings.TrimSpace(line[6:])
+			item.IPCat = ipcat
 			blacklist.Add(item)
 			continue
 		}
@@ -203,7 +229,7 @@ func ParseBlacklist(text string) ZerodropBlacklist {
 				continue
 			}
 
-			item.Geofence = &ZerodropGeofence{
+			item.Geofence = &Geofence{
 				Latitude:  lat,
 				Longitude: lng,
 				Radius:    radius,
@@ -251,14 +277,17 @@ func ParseBlacklist(text string) ZerodropBlacklist {
 	return blacklist
 }
 
-func (b *ZerodropBlacklist) Add(item *ZerodropBlacklistItem) {
+// Add appends a BlacklistRule to the Blacklist.
+func (b *Blacklist) Add(item *BlacklistRule) {
 	b.List = append(b.List, item)
 }
 
-func (b *ZerodropBlacklist) Allow(ip net.IP, geodb *geoip2.Reader) bool {
+// Allow decides whether the Blacklist permits the selected IP address.
+func (b *Blacklist) Allow(ctx *BlacklistContext, ip net.IP) bool {
 	allow := true
 
-	user := (*ZerodropGeofence)(nil)
+	user := (*Geofence)(nil)
+	category := (*ipcat.Interval)(nil)
 
 	for _, item := range b.List {
 		match := false
@@ -311,18 +340,18 @@ func (b *ZerodropBlacklist) Allow(ip net.IP, geodb *geoip2.Reader) bool {
 				}
 			}
 		} else if item.Geofence != nil {
-			if geodb == nil {
-				log.Println("Denying access to geofenced blacklist: No GeoDB provided.")
+			if ctx.GeoDB == nil {
+				log.Println("Denying access by geofence rule error: no database provided")
 				return false
 			}
 
 			if user == nil {
-				record, err := geodb.City(ip)
+				record, err := ctx.GeoDB.City(ip)
 				if err != nil {
-					log.Println("Denying access to geofenced blacklist: Error loading IP.")
+					log.Printf("Denying access by geofence rule error: %s", err.Error())
 					return false
 				}
-				user = &ZerodropGeofence{
+				user = &Geofence{
 					Latitude:  record.Location.Latitude,
 					Longitude: record.Location.Longitude,
 					Radius:    float64(record.Location.AccuracyRadius) * 1000.0, // Convert km to m
@@ -338,8 +367,41 @@ func (b *ZerodropBlacklist) Allow(ip net.IP, geodb *geoip2.Reader) bool {
 				// Blacklist if user intersects at all with bounds
 				match = !(boundsIntersect&IsDisjoint != 0)
 			}
+		} else if item.IPCat != "" {
+			if ctx.IPSet == nil {
+				log.Println("Denying access by ipcat rule error: no database provided")
+				return false
+			}
+
+			if category == nil {
+				ipv4 := ip.To4()
+				if ipv4 != nil {
+					dots := ipv4.String()
+					interval, err := ctx.IPSet.Contains(dots)
+					if err != nil {
+						log.Printf("Denying access by ipcat rule error: %s", err.Error())
+						return false
+					}
+					category = interval
+				}
+			}
+
+			if category != nil {
+				var err error
+
+				name := strings.ToLower(category.Name)
+				search := strings.Replace(regexp.QuoteMeta(strings.ToLower(item.IPCat)), `\*`, `.*`, -1)
+				match, err = regexp.MatchString(search, name)
+				if err != nil {
+					log.Printf("Denying access by ipcat rule error: %s", err.Error())
+					return false
+				}
+			}
+
+			return false
 		}
 
+		// TODO: Allow early termination based on negation flags
 		if match {
 			allow = item.Negation
 		}

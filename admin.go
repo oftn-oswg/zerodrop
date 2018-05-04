@@ -56,6 +56,7 @@ func NewAdminHandler(db *ZerodropDB, config *ZerodropConfig) *AdminHandler {
 	return handler
 }
 
+// AdminPageData represents the data served to the admin templates.
 type AdminPageData struct {
 	Error    string
 	Title    string
@@ -64,6 +65,7 @@ type AdminPageData struct {
 	Entries  []ZerodropEntry
 }
 
+// ServeLogin renders the login page.
 func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request) {
 	page := a.Config.Base + "admin/login"
 	if r.URL.Path != "/login" {
@@ -79,6 +81,7 @@ func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ServeNew renders the new entry page.
 func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		err := r.ParseMultipartForm(int64(a.Config.UploadMaxSize))
@@ -181,6 +184,7 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ServeMain serves the entry list.
 func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
 	data := &AdminPageData{Title: "Zerodrop Admin", LoggedIn: true, Config: a.Config}
 
