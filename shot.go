@@ -3,7 +3,6 @@ package main
 import (
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -71,17 +70,9 @@ func NewShotHandler(db *ZerodropDB, config *ZerodropConfig, notfound NotFoundHan
 // Access returns the ZerodropEntry with the specified name as long as access
 // is permitted. The function returns nil otherwise.
 func (a *ShotHandler) Access(name string, request *http.Request) *ZerodropEntry {
-	addr := RealRemoteAddr(request)
-
-	host, _, err := net.SplitHostPort(addr)
-	if err != nil {
-		log.Printf("Could not parse remote address and port: %s", err.Error())
-		return nil
-	}
-
-	ip := net.ParseIP(host)
+	ip := RealRemoteIP(request)
 	if ip == nil {
-		log.Printf("Could not parse IP address: %s", host)
+		log.Printf("Could not parse remote address from %s", request.RemoteAddr)
 		return nil
 	}
 
@@ -144,13 +135,15 @@ func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	name := strings.Trim(r.URL.Path, "/")
 	entry := a.Access(name, r)
 
+	ip := RealRemoteIP(r)
+
 	if entry == nil {
-		log.Printf("Denied access to %s to %s", strconv.Quote(name), RealRemoteAddr(r))
+		log.Printf("Denied access to %s to %s", strconv.Quote(name), ip)
 		a.NotFound.ServeHTTP(w, r)
 		return
 	}
 
-	log.Printf("Granted access to %s to %s", strconv.Quote(entry.Name), RealRemoteAddr(r))
+	log.Printf("Granted access to %s to %s", strconv.Quote(entry.Name), ip)
 
 	// File Upload
 	if entry.URL == "" {

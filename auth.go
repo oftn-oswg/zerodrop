@@ -41,13 +41,15 @@ func (a *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		redirect := "/"
 		err := a.validate(w, r)
 
+		ip := RealRemoteIP(r)
+
 		if err == nil {
-			log.Println("Successful authentication by " + RealRemoteAddr(r))
+			log.Printf("Successful authentication by %s", ip)
 			if a.SuccessRedirect != "" {
 				redirect = a.SuccessRedirect
 			}
 		} else {
-			log.Println("Failed authentication by " + RealRemoteAddr(r))
+			log.Printf("Failed authentication by %s", ip)
 			if a.FailureRedirect != "" {
 				redirect = a.FailureRedirect
 			}
