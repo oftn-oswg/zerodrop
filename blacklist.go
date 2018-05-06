@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/client9/ipcat"
+	"github.com/oftn-oswg/ipcat"
 	"github.com/oschwald/geoip2-golang"
 )
 
@@ -16,8 +16,8 @@ import (
 // used to categorize IP addresses needed for specific rules, like
 // the geolocation database used for geofencing or the ipcat database.
 type BlacklistContext struct {
-	GeoDB *geoip2.Reader
-	IPSet *ipcat.IntervalSet
+	GeoDB     *geoip2.Reader
+	Databases map[string]*ipcat.IntervalSet
 }
 
 // BlacklistRule is a structure that represents a rule or comment as part
@@ -31,7 +31,7 @@ type BlacklistRule struct {
 	Hostname string
 	Regexp   *regexp.Regexp
 	Geofence *Geofence
-	IPCat    string
+	Database string
 }
 
 func (i BlacklistRule) String() (value string) {
@@ -73,8 +73,8 @@ func (i BlacklistRule) String() (value string) {
 		return
 	}
 
-	if i.IPCat != "" {
-		value += "ipcat " + i.IPCat
+	if i.Database != "" {
+		value += "db " + i.Database
 	}
 
 	if i.Comment != "" {
@@ -124,7 +124,7 @@ var geofenceUnits = map[string]float64{
 }
 
 // ParseBlacklist parses a text blacklist and returns a Blacklist object.
-func ParseBlacklist(text string) Blacklist {
+func ParseBlacklist(text string, dbconfig map[string]string) Blacklist {
 	lines := strings.Split(text, "\n")
 	blacklist := Blacklist{List: []*BlacklistRule{}}
 
@@ -159,10 +159,15 @@ func ParseBlacklist(text string) Blacklist {
 			continue
 		}
 
-		// IPCat database query match
-		if line[:6] == "ipcat " {
-			ipcat := strings.TrimSpace(line[6:])
-			item.IPCat = ipcat
+		// Database query match
+		if line[:3] == "db " {
+			db := strings.ToLower(strings.TrimSpace(line[3:]))
+			if _, ok := dbconfig[db]; !ok {
+				item.Comment = fmt.Sprintf("Error: %s: No database specified named %q", line, db)
+				blacklist.Add(item)
+				continue
+			}
+			item.Database = db
 			blacklist.Add(item)
 			continue
 		}
@@ -287,7 +292,6 @@ func (b *Blacklist) Allow(ctx *BlacklistContext, ip net.IP) bool {
 	allow := true
 
 	user := (*Geofence)(nil)
-	category := (*ipcat.Interval)(nil)
 
 	for _, item := range b.List {
 		match := false
@@ -367,38 +371,20 @@ func (b *Blacklist) Allow(ctx *BlacklistContext, ip net.IP) bool {
 				// Blacklist if user intersects at all with bounds
 				match = !(boundsIntersect&IsDisjoint != 0)
 			}
-		} else if item.IPCat != "" {
-			if ctx.IPSet == nil {
-				log.Println("Denying access by ipcat rule error: no database provided")
+		} else if item.Database != "" {
+			db, ok := ctx.Databases[item.Database]
+			if !ok {
+				log.Printf("Denying access by db rule error: database %q not provided", item.Database)
 				return false
 			}
 
-			if category == nil {
-				ipv4 := ip.To4()
-				if ipv4 != nil {
-					dots := ipv4.String()
-					interval, err := ctx.IPSet.Contains(dots)
-					if err != nil {
-						log.Printf("Denying access by ipcat rule error: %s", err.Error())
-						return false
-					}
-					category = interval
-				}
+			interval, err := db.Contains(ip.String())
+			if err != nil {
+				log.Printf("Denying access by db rule error: %s", err.Error())
+				return false
 			}
 
-			if category != nil {
-				var err error
-
-				name := strings.ToLower(category.Name)
-				search := strings.Replace(regexp.QuoteMeta(strings.ToLower(item.IPCat)), `\*`, `.*`, -1)
-				match, err = regexp.MatchString(search, name)
-				if err != nil {
-					log.Printf("Denying access by ipcat rule error: %s", err.Error())
-					return false
-				}
-			}
-
-			return false
+			match = interval != nil
 		}
 
 		// TODO: Allow early termination based on negation flags

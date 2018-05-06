@@ -166,7 +166,7 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 		// Access information
 		entry.AccessExpire = r.FormValue("access_expire") != ""
 		entry.AccessExpireCount, _ = strconv.Atoi(r.FormValue("access_expire_count"))
-		entry.AccessBlacklist = ParseBlacklist(r.FormValue("blacklist"))
+		entry.AccessBlacklist = ParseBlacklist(r.FormValue("blacklist"), a.Config.Databases)
 
 		if err := a.DB.Create(entry); err == nil {
 			log.Printf("Created entry %s", entry)

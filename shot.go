@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/client9/ipcat"
+	"github.com/oftn-oswg/ipcat"
 
 	"github.com/oschwald/geoip2-golang"
 )
@@ -31,38 +31,40 @@ type ShotHandler struct {
 
 // NewShotHandler constructs a new ShotHandler from the arguments.
 func NewShotHandler(db *ZerodropDB, config *ZerodropConfig, notfound NotFoundHandler) *ShotHandler {
-	var geodb *geoip2.Reader
+	ctx := &BlacklistContext{Databases: make(map[string]*ipcat.IntervalSet)}
+
 	if config.GeoDB != "" {
 		var err error
-		geodb, err = geoip2.Open(config.GeoDB)
+		ctx.GeoDB, err = geoip2.Open(config.GeoDB)
 		if err != nil {
 			log.Printf("Could not open geolocation database: %s", err.Error())
 		}
 	}
 
-	var ipset *ipcat.IntervalSet
-	if config.IPCat != "" {
-		reader, err := os.Open(config.IPCat)
+	for key, location := range config.Databases {
+		key = strings.ToLower(key)
+
+		reader, err := os.Open(location)
 		if err != nil {
-			log.Printf("Could not open ipcat database: %s", err.Error())
-		} else {
-			ipset = ipcat.NewIntervalSet(4096)
-			err := ipset.ImportCSV(reader)
-			if err != nil {
-				log.Printf("Could not import ipcat database: %s", err.Error())
-				ipset = nil
-			}
+			log.Printf("Could not open database %q: %s", key, err.Error())
+			continue
 		}
+
+		ipset := ipcat.NewIntervalSet(4096)
+
+		if err := ipset.ImportCSV(reader); err != nil {
+			log.Printf("Could not import database %q: %s", key, err.Error())
+			continue
+		}
+
+		ctx.Databases[key] = ipset
 	}
 
 	return &ShotHandler{
 		DB:       db,
 		Config:   config,
 		NotFound: notfound,
-		Context: &BlacklistContext{
-			GeoDB: geodb,
-			IPSet: ipset,
-		},
+		Context:  ctx,
 	}
 }
 

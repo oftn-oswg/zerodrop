@@ -27,7 +27,7 @@ The blacklist syntax is similar to that of [gitignore][1]. An optional prefix `!
 4. Match Hostname [e.g. `crawl-66-249-66-1.googlebot.com`]
 5. Match Hostname RegExp [e.g.: `~ .*\.cox\.net`]
 6. Match Geofence [e.g.: `@ 39.377297 -74.451082 (7km)`]
-7. Match [ipcat][2] [e.g. `ipcat Cloudflare Inc`]
+7. Match [database][2] [e.g. `db datacenters` or `db tor`]
 
 ### Whitelist
 
@@ -64,12 +64,20 @@ shady.com
 ~ (.*)\.shady\.com # Block subdomains of shady
 ```
 
-## IPCat
+## Databases
 
-A rule that begins with "`ipcat `" will be matched with the IPCat database by name.
-This rule is currently in development so this syntax and usage may change. Use `*`
-to match a multitude of characters like a glob, e.g. `!ipcat Akamai` to whitelist
-Akamai requests.
+A rule that begins with "`db `" will be matched with a database by name, e.g.,
+`!db tor` to whitelist Tor exit nodes. The database file must be specified in
+the config.
+
+```yaml
+databases:
+    cloudflare: cloudflare.csv
+    datacenters: datacenters.csv
+    tor: torexitnodes.csv
+```
+
+The format of the CSV file is specified by [ipcat][2] rules.
 
 
 [1]: https://git-scm.com/docs/gitignore
