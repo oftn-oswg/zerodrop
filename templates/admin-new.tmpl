@@ -97,7 +97,7 @@
                             </div>
                         </div>
                         <div class="input-group-prepend">
-                            <label class="input-group-text" for="access_expire">Expire access to the page after</label>
+                            <label class="input-group-text" for="access_expire">Expire <span class="d-none d-md-inline">&nbsp;access to the page&nbsp;</span> after</label>
                         </div>
                         <input name="access_expire_count" type="number" class="form-control" value="1" step="1" min="0" />
                         <div class="input-group-append">
@@ -121,7 +121,7 @@
                                 <span class="input-group-text">{{$.Config.Base}}</span>
                             </div>
                             <input type="text" id="publish" name="publish" class="form-control" />
-                            <div class="input-group-append">
+                            <div class="input-group-append d-none d-md-block">
                                 <button type="button" class="btn btn-outline-secondary" onclick="uuid()">Generate UUID</button>
                             </div>
                         </div>
