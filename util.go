@@ -28,24 +28,30 @@ func ParseSocketName(value string) (string, string) {
 // RealRemoteIP returns the value of the X-Real-IP header,
 // or the RemoteAddr property if the header does not exist.
 func RealRemoteIP(r *http.Request) net.IP {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return nil
-	}
+	// When local, RemoteAddr is empty.
+	if r.RemoteAddr != "" {
+		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			return nil
+		}
 
-	ip := net.ParseIP(host)
-	if ip == nil {
-		return nil
-	}
+		ip := net.ParseIP(host)
+		if ip == nil {
+			return nil
+		}
 
-	if ip.IsLoopback() {
-		if real := r.Header.Get("X-Real-IP"); real != "" {
-			ip := net.ParseIP(real)
-			if ip != nil {
-				return ip
-			}
+		if !ip.IsLoopback() {
+			return ip
 		}
 	}
 
-	return ip
+	// Now we are guaranteed that we are being accessed by local.
+	if real := r.Header.Get("X-Real-IP"); real != "" {
+		ip := net.ParseIP(real)
+		if ip != nil {
+			return ip
+		}
+	}
+
+	return nil
 }
