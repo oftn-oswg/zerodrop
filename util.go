@@ -29,12 +29,8 @@ func ParseSocketName(value string) (string, string) {
 // or the RemoteAddr property if the header does not exist.
 func RealRemoteIP(r *http.Request) net.IP {
 	// When local, RemoteAddr is empty.
-	if r.RemoteAddr != "" {
-		host, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			return nil
-		}
-
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err == nil {
 		ip := net.ParseIP(host)
 		if ip == nil {
 			return nil
