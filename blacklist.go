@@ -40,28 +40,43 @@ func (i BlacklistRule) String() (value string) {
 	}
 
 	if i.All {
-		value += "* # Wildcard"
+		value += "*"
+		if i.Comment != "" {
+			value += " # " + i.Comment
+		}
 		return
 	}
 
 	if i.Network != nil {
-		value += i.Network.String() + " # Network"
+		value += i.Network.String()
+		if i.Comment != "" {
+			value += " # " + i.Comment
+		}
 		return
 	}
 
 	if i.IP != nil {
-		value += i.IP.String() + " # IP Address"
+		value += i.IP.String()
+		if i.Comment != "" {
+			value += " # " + i.Comment
+		}
 		return
 	}
 
 	if i.Hostname != "" {
-		value += i.Hostname + " # Hostname"
+		value += i.Hostname
+		if i.Comment != "" {
+			value += " # " + i.Comment
+		}
 		return
 	}
 
 	if i.Regexp != nil {
 		value += "~"
-		value += i.Regexp.String() + " # Regular Expression"
+		value += i.Regexp.String()
+		if i.Comment != "" {
+			value += " # " + i.Comment
+		}
 		return
 	}
 
@@ -69,12 +84,19 @@ func (i BlacklistRule) String() (value string) {
 		value += "@ " +
 			strconv.FormatFloat(i.Geofence.Latitude, 'f', -1, 64) + ", " +
 			strconv.FormatFloat(i.Geofence.Longitude, 'f', -1, 64) + " (" +
-			strconv.FormatFloat(i.Geofence.Radius, 'f', -1, 64) + "m) # Geofence"
+			strconv.FormatFloat(i.Geofence.Radius, 'f', -1, 64) + "m)"
+		if i.Comment != "" {
+			value += " # " + i.Comment
+		}
 		return
 	}
 
 	if i.Database != "" {
 		value += "db " + i.Database
+		if i.Comment != "" {
+			value += " # " + i.Comment
+		}
+		return
 	}
 
 	if i.Comment != "" {
@@ -95,7 +117,9 @@ func (b Blacklist) String() string {
 	// Stringify items
 	items := make([]string, len(b.List)+1)
 	for index, item := range b.List {
-		if item.Comment == "" {
+		if item.All || item.Network != nil || item.Geofence != nil ||
+			item.Database != "" || item.Hostname != "" || item.IP != nil ||
+			item.Regexp != nil {
 			itemCount++
 		}
 		items[index+1] = item.String()
@@ -129,8 +153,11 @@ func ParseBlacklist(text string, dbconfig map[string]string) Blacklist {
 	blacklist := Blacklist{List: []*BlacklistRule{}}
 
 	for _, line := range lines {
+		item := &BlacklistRule{}
+
 		// A line with # serves as a comment.
 		if commentStart := strings.IndexByte(line, '#'); commentStart >= 0 {
+			item.Comment = strings.TrimSpace(line[commentStart+1:])
 			line = line[:commentStart]
 		}
 
@@ -138,10 +165,11 @@ func ParseBlacklist(text string, dbconfig map[string]string) Blacklist {
 		// so it can serve as a separator for readability.
 		line = strings.TrimSpace(line)
 		if line == "" {
+			if item.Comment != "" {
+				blacklist.Add(item)
+			}
 			continue
 		}
-
-		item := &BlacklistRule{}
 
 		// An optional prefix "!" which negates the pattern;
 		// any matching address/host excluded by a previous pattern
