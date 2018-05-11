@@ -4,7 +4,7 @@ import (
 	"github.com/kellydunn/golang-geo"
 )
 
-// Geofence represents a point on the Earth with an accuracy radius.
+// Geofence represents a point on the Earth with an accuracy radius in meters.
 type Geofence struct {
 	Latitude, Longitude, Radius float64
 }
@@ -29,17 +29,19 @@ func (mi *Geofence) Intersection(tu *Geofence) (i SetIntersection) {
 	tuPoint := geo.NewPoint(tu.Latitude, tu.Longitude)
 	distance := miPoint.GreatCircleDistance(tuPoint) * 1000
 
-	ourRadius := mi.Radius + tu.Radius
-	if ourRadius > distance {
+	radiusSum := mi.Radius + tu.Radius
+	radiusDiff := mi.Radius - tu.Radius
+
+	if distance-radiusSum > 0 {
 		i = IsDisjoint
 		return
 	}
 
-	if mi.Radius-tu.Radius > distance {
+	if -distance+radiusDiff >= 0 {
 		i |= IsSuperset
 	}
 
-	if tu.Radius-mi.Radius > distance {
+	if -distance-radiusDiff >= 0 {
 		i |= IsSubset
 	}
 
