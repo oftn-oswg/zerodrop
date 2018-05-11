@@ -27,6 +27,8 @@ type ZerodropConfig struct {
 	UploadDirectory   string `default:"."`
 	UploadPermissions uint32 `default:"0600"`
 	UploadMaxSize     uint64 `default:"1000000"`
+
+	RedirectLevels int `default:"128"`
 }
 
 func main() {

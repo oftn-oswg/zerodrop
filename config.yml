@@ -22,7 +22,7 @@ databases:
     tor: ../ipcat/tor.csv
 
 # The directory to upload files to
-uploaddirectory: .
+uploaddirectory: ./uploads/
 
 # The permissions to set for file uploads
 uploadpermissions: 0600

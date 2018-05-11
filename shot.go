@@ -69,7 +69,16 @@ func NewShotHandler(db *ZerodropDB, config *ZerodropConfig, notfound NotFoundHan
 
 // Access returns the ZerodropEntry with the specified name as long as access
 // is permitted. The function returns nil otherwise.
-func (a *ShotHandler) Access(name string, request *http.Request) *ZerodropEntry {
+func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels int) *ZerodropEntry {
+	if name == "" {
+		return nil
+	}
+
+	if redirectLevels <= 0 {
+		log.Println("Exceeded redirection levels")
+	}
+	redirectLevels--
+
 	ip := RealRemoteIP(request)
 	if ip == nil {
 		log.Printf("Could not parse remote address from %s", request.RemoteAddr)
@@ -104,23 +113,20 @@ func (a *ShotHandler) Access(name string, request *http.Request) *ZerodropEntry 
 
 		if err := entry.Update(); err != nil {
 			log.Printf("Error adding to blacklist: %s", err.Error())
-			return nil
 		}
-		return nil
+		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels)
 	}
 
 	if entry.IsExpired() {
-		log.Printf("Access restricted to expired %s from %s", entry.Name, ip.String())
 		entry.AccessBlacklistCount++
 		entry.Update()
-		return nil
+		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels)
 	}
 
 	if !entry.AccessBlacklist.Allow(a.Context, ip) {
-		log.Printf("Access restricted to %s from blacklisted %s", entry.Name, ip.String())
 		entry.AccessBlacklistCount++
 		entry.Update()
-		return nil
+		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels)
 	}
 
 	entry.AccessCount++
@@ -133,7 +139,7 @@ func (a *ShotHandler) Access(name string, request *http.Request) *ZerodropEntry 
 func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Get entry
 	name := strings.Trim(r.URL.Path, "/")
-	entry := a.Access(name, r)
+	entry := a.Access(name, r, a.Config.RedirectLevels)
 
 	ip := RealRemoteIP(r)
 

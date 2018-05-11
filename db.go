@@ -16,6 +16,7 @@ type ZerodropEntry struct {
 	ContentType          string    // The MIME type to serve as Content-Type header
 	Redirect             bool      // Indicates whether to redirect instead of proxy
 	Creation             time.Time // The time this entry was created
+	AccessRedirectOnDeny string    // Entry to redirect to if entry is blacklisted or expired
 	AccessBlacklist      Blacklist // Blacklist
 	AccessBlacklistCount int       // Number of requests that have been caught by the blacklist
 	AccessExpire         bool      // Indicates whether to expire after finite access
