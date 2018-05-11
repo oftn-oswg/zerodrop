@@ -71,7 +71,7 @@ A rule that begins with "`db `" will be matched with a database by name, e.g.,
 the config.
 
 ```yaml
-databases:
+ipcat:
     cloudflare: cloudflare.csv
     datacenters: datacenters.csv
     tor: torexitnodes.csv
