@@ -62,7 +62,7 @@ type AdminPageData struct {
 	Title    string
 	LoggedIn bool
 	Config   *ZerodropConfig
-	Entries  []ZerodropEntry
+	Entries  []*ZerodropEntry
 }
 
 // ServeLogin renders the login page.
@@ -166,10 +166,12 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 		// Access information
 		entry.AccessExpire = r.FormValue("access_expire") != ""
 		entry.AccessExpireCount, _ = strconv.Atoi(r.FormValue("access_expire_count"))
-		entry.AccessBlacklist = ParseBlacklist(r.FormValue("blacklist"), a.Config.Databases)
+		entry.AccessBlacklist = ParseBlacklist(r.FormValue("blacklist"), a.Config.IPCat)
 		entry.AccessRedirectOnDeny = strings.TrimSpace(r.FormValue("access_redirect_on_deny"))
 
-		if err := a.DB.Create(entry); err == nil {
+		if err := a.DB.Update(entry); err != nil {
+			log.Printf("Error creating entry %s: %s", entry.Name, err)
+		} else {
 			log.Printf("Created entry %s", entry)
 		}
 
@@ -196,21 +198,34 @@ func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
 
 		case "train":
 			name := r.FormValue("name")
-			entry, ok := a.DB.Get(name)
-			if ok {
+			entry, err := a.DB.Get(name)
+			if err != nil {
+				log.Println(err)
+			} else {
 				entry.SetTraining(!entry.AccessTrain)
+				if err := a.DB.Update(entry); err != nil {
+					log.Println(err)
+				}
 			}
 
 		case "delete":
 			name := r.FormValue("name")
 			if name != "" {
-				a.DB.Remove(name)
-				log.Printf("Removed entry: %s", name)
+				err := a.DB.Remove(name)
+				if err != nil {
+					log.Println(err)
+				} else {
+					log.Printf("Removed entry: %s", name)
+				}
 			}
 
 		case "clear":
-			a.DB.Clear()
-			log.Println("Cleared all entries")
+			err := a.DB.Clear()
+			if err != nil {
+				log.Println(err)
+			} else {
+				log.Println("Cleared all entries")
+			}
 
 		}
 
@@ -218,11 +233,11 @@ func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data.Entries = a.DB.List()
+	var err error
+	data.Entries, err = a.DB.List()
 
 	interfaceTmpl := a.Templates.Lookup("admin-main.tmpl")
-	err := interfaceTmpl.ExecuteTemplate(w, "main", data)
-	if err != nil {
+	if interfaceTmpl.ExecuteTemplate(w, "main", data) != nil {
 		log.Println(err)
 	}
 }

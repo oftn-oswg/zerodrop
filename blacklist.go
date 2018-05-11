@@ -29,7 +29,7 @@ type BlacklistRule struct {
 	Network  *net.IPNet
 	IP       net.IP
 	Hostname string
-	Regexp   *regexp.Regexp
+	Regexp   string
 	Geofence *Geofence
 	Database string
 }
@@ -71,9 +71,9 @@ func (i BlacklistRule) String() (value string) {
 		return
 	}
 
-	if i.Regexp != nil {
+	if i.Regexp != "" {
 		value += "~"
-		value += i.Regexp.String()
+		value += i.Regexp
 		if i.Comment != "" {
 			value += " # " + i.Comment
 		}
@@ -119,7 +119,7 @@ func (b Blacklist) String() string {
 	for index, item := range b.List {
 		if item.All || item.Network != nil || item.Geofence != nil ||
 			item.Database != "" || item.Hostname != "" || item.IP != nil ||
-			item.Regexp != nil {
+			item.Regexp != "" {
 			itemCount++
 		}
 		items[index+1] = item.String()
@@ -273,7 +273,7 @@ func ParseBlacklist(text string, dbconfig map[string]string) Blacklist {
 		case '~':
 			// An optional prefix "~" indicates a hostname regular expression match.
 			line = strings.TrimSpace(line[1:])
-			reg, err := regexp.Compile(line)
+			_, err := regexp.Compile(line)
 			if err != nil {
 				item.Comment = fmt.Sprintf(
 					"Error: %s: malformed regular expression: %s",
@@ -282,7 +282,7 @@ func ParseBlacklist(text string, dbconfig map[string]string) Blacklist {
 				continue
 			}
 
-			item.Regexp = reg
+			item.Regexp = line
 			blacklist.Add(item)
 			continue
 		}
@@ -359,13 +359,18 @@ func (b *Blacklist) Allow(ctx *BlacklistContext, ip net.IP) bool {
 				}
 			}
 
-		} else if item.Regexp != nil {
+		} else if item.Regexp != "" {
 			// Regular Expression
+			regex, err := regexp.Compile(item.Regexp)
+			if err != nil {
+				log.Printf("Error compiling regular expression: %s", err)
+			}
+
 			names, err := net.LookupAddr(ip.String())
 			if err != nil {
 				for _, name := range names {
 					name = strings.ToLower(name)
-					if item.Regexp.Match([]byte(name)) {
+					if regex.Match([]byte(name)) {
 						match = true
 						break
 					}

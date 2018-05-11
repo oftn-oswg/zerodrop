@@ -40,7 +40,7 @@ func NewShotHandler(db *ZerodropDB, config *ZerodropConfig, notfound NotFoundHan
 		}
 	}
 
-	for key, location := range config.Databases {
+	for key, location := range config.IPCat {
 		key = strings.ToLower(key)
 
 		reader, err := os.Open(location)
@@ -85,8 +85,8 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 		return nil
 	}
 
-	entry, ok := a.DB.Get(name)
-	if !ok {
+	entry, err := a.DB.Get(name)
+	if err != nil {
 		return nil
 	}
 
@@ -111,7 +111,7 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 			}
 		}
 
-		if err := entry.Update(); err != nil {
+		if err := a.DB.Update(entry); err != nil {
 			log.Printf("Error adding to blacklist: %s", err.Error())
 		}
 		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels)
@@ -119,20 +119,26 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 
 	if entry.IsExpired() {
 		entry.AccessBlacklistCount++
-		entry.Update()
+		if err := a.DB.Update(entry); err != nil {
+			log.Println(err)
+		}
 		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels)
 	}
 
 	if !entry.AccessBlacklist.Allow(a.Context, ip) {
 		entry.AccessBlacklistCount++
-		entry.Update()
+		if err := a.DB.Update(entry); err != nil {
+			log.Println(err)
+		}
 		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels)
 	}
 
 	entry.AccessCount++
-	entry.Update()
+	if err := a.DB.Update(entry); err != nil {
+		log.Println(err)
+	}
 
-	return &entry
+	return entry
 }
 
 // ServeHTTP generates the HTTP response.

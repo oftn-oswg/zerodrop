@@ -21,14 +21,19 @@ type ZerodropConfig struct {
 	AuthSecret string `default:"ggVUtPQdIL3kuMSeHQgn7PW9nv3XuJBp"`
 	AuthDigest string `default:"11a55ac5de2beb9146e01386dd978a13bb9b99388f5eb52e37f69a32e3d5f11e"`
 
-	GeoDB     string
-	Databases map[string]string
+	GeoDB string
+	IPCat map[string]string
 
 	UploadDirectory   string `default:"."`
 	UploadPermissions uint32 `default:"0600"`
 	UploadMaxSize     uint64 `default:"1000000"`
 
 	RedirectLevels int `default:"128"`
+
+	DB struct {
+		Driver string `default:"sqlite3"`
+		Source string `default:"zerodrop.db"`
+	}
 }
 
 func main() {
@@ -79,7 +84,7 @@ func main() {
 
 	notfound := NotFoundHandler{}
 
-	if err := db.Connect(); err != nil {
+	if err := db.Connect(config.DB.Driver, config.DB.Source); err != nil {
 		log.Fatal(err)
 	}
 

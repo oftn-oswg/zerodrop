@@ -17,7 +17,7 @@ authdigest: 11a55ac5de2beb9146e01386dd978a13bb9b99388f5eb52e37f69a32e3d5f11e
 geodb: GeoLite2-City.mmdb
 
 # The databases to include for categorical blacklisting
-databases:
+ipcat:
     datacenters: ../ipcat/datacenters.csv
     tor: ../ipcat/tor.csv
 
