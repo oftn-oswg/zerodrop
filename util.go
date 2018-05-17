@@ -45,43 +45,51 @@ func getCloudflareSet() *ipcat.IntervalSet {
 
 var cloudflareSet = getCloudflareSet()
 
-// RealRemoteIP returns the value of the X-Real-IP header,
-// or the RemoteAddr property if the header does not exist.
-func RealRemoteIP(r *http.Request) net.IP {
-	var ip net.IP
-
-	// When local, RemoteAddr is empty.
+func peelRemoteIP(r *http.Request) net.IP {
+	log.Printf("peelRemoteIP %s", r.RemoteAddr)
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err == nil {
-		ip = net.ParseIP(host)
-		if ip == nil {
-			return nil
-		}
+	if err != nil {
+		// We could not parse the host and port.
+		// Assume this means local.
+		return net.IPv6loopback
+	}
+	return net.ParseIP(host)
+}
 
-		if cloudflareSet != nil {
-			record, err := cloudflareSet.Contains(ip.String())
-			if err == nil && record != nil {
-				// We are being served by Cloudflare
-				connectingIP := r.Header.Get("CF-Connecting-IP")
-				log.Printf("Cloudflare IP %s detected: forwarding %s", ip, connectingIP)
-				if connectingIP != "" {
-					return net.ParseIP(connectingIP)
+func peelLocalProxy(ip net.IP, r *http.Request) net.IP {
+	log.Printf("peelLocalProxy %s", ip)
+	if ip != nil {
+		// Local proxies only!
+		if ip.IsLoopback() {
+			if real := r.Header.Get("X-Real-IP"); real != "" {
+				headerip := net.ParseIP(real)
+				if headerip != nil {
+					return headerip
 				}
 			}
 		}
-
-		if !ip.IsLoopback() {
-			return ip
-		}
 	}
-
-	// Now we are guaranteed that we are being accessed by local.
-	if real := r.Header.Get("X-Real-IP"); real != "" {
-		headerip := net.ParseIP(real)
-		if headerip != nil {
-			return headerip
-		}
-	}
-
 	return ip
+}
+
+func peelCloudflare(ip net.IP, r *http.Request) net.IP {
+	log.Printf("peelCloudflare %s", ip)
+	if cloudflareSet != nil {
+		// Cloudflare proxy only!
+		record, err := cloudflareSet.Contains(ip.String())
+		if err == nil && record != nil {
+			// We are being served by Cloudflare
+			connectingIP := r.Header.Get("CF-Connecting-IP")
+			if connectingIP != "" {
+				return net.ParseIP(connectingIP)
+			}
+		}
+	}
+	return ip
+}
+
+// RealRemoteIP returns the value of the X-Real-IP header,
+// or the RemoteAddr property if the header does not exist.
+func RealRemoteIP(r *http.Request) net.IP {
+	return peelCloudflare(peelLocalProxy(peelRemoteIP(r), r), r)
 }
