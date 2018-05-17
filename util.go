@@ -46,7 +46,6 @@ func getCloudflareSet() *ipcat.IntervalSet {
 var cloudflareSet = getCloudflareSet()
 
 func peelRemoteIP(r *http.Request) net.IP {
-	log.Printf("peelRemoteIP %s", r.RemoteAddr)
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		// We could not parse the host and port.
@@ -57,7 +56,6 @@ func peelRemoteIP(r *http.Request) net.IP {
 }
 
 func peelLocalProxy(ip net.IP, r *http.Request) net.IP {
-	log.Printf("peelLocalProxy %s", ip)
 	if ip != nil {
 		// Local proxies only!
 		if ip.IsLoopback() {
@@ -73,7 +71,6 @@ func peelLocalProxy(ip net.IP, r *http.Request) net.IP {
 }
 
 func peelCloudflare(ip net.IP, r *http.Request) net.IP {
-	log.Printf("peelCloudflare %s", ip)
 	if cloudflareSet != nil {
 		// Cloudflare proxy only!
 		record, err := cloudflareSet.Contains(ip.String())
