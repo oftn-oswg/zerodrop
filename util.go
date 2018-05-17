@@ -1,10 +1,13 @@
 package main
 
 import (
+	"log"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/oftn-oswg/ipcat"
 )
 
 // ParseSocketName produces a struct suitable for net.Dial
@@ -25,6 +28,23 @@ func ParseSocketName(value string) (string, string) {
 	return "tcp", value
 }
 
+func getCloudflareSet() *ipcat.IntervalSet {
+	ipset := ipcat.NewIntervalSet(24)
+	cloudflareRanges, err := ipcat.DownloadCloudflare()
+	if err != nil {
+		log.Printf("Could not download Cloudflare ranges: %s", err)
+		return nil
+	}
+	if err := ipcat.UpdateCloudflare(ipset, cloudflareRanges); err != nil {
+		log.Printf("Could not update Cloudflare ranges: %s", err)
+		return nil
+	}
+	log.Printf("Loaded %d Cloudflare records\n", ipset.Len())
+	return ipset
+}
+
+var cloudflareSet = getCloudflareSet()
+
 // RealRemoteIP returns the value of the X-Real-IP header,
 // or the RemoteAddr property if the header does not exist.
 func RealRemoteIP(r *http.Request) net.IP {
@@ -36,6 +56,20 @@ func RealRemoteIP(r *http.Request) net.IP {
 		ip = net.ParseIP(host)
 		if ip == nil {
 			return nil
+		}
+
+		if cloudflareSet != nil {
+			record, err := cloudflareSet.Contains(ip.String())
+			if err == nil && record != nil {
+				// We are being served by Cloudflare
+				connectingIP := r.Header.Get("CF-Connecting-IP")
+				if connectingIP != "" {
+					ip = net.ParseIP(connectingIP)
+					if ip == nil {
+						return nil
+					}
+				}
+			}
 		}
 
 		if !ip.IsLoopback() {

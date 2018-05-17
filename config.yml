@@ -21,6 +21,10 @@ ipcat:
     datacenters: ../ipcat/datacenters.csv
     tor: ../ipcat/tor.csv
 
+# The number of levels of internal redirects to allow for the Redirect On Deny
+# feature. This is to prevent infinite loops.
+redirectlevels: 128
+
 # The directory to upload files to
 uploaddirectory: ./uploads/
 
@@ -29,3 +33,8 @@ uploadpermissions: 0600
 
 # The maximum form and file upload size in bytes
 uploadmaxsize: 1000000
+
+# Database connection information
+db:
+    driver: sqlite3
+    source: zerodrop.db
