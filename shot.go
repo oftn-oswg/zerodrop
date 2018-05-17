@@ -22,14 +22,15 @@ var headerCacheControl = "no-cache, no-store, must-revalidate"
 // ShotHandler serves the requested page and removes it from the database, or
 // returns 404 page if not available.
 type ShotHandler struct {
-	DB       *ZerodropDB
-	Config   *ZerodropConfig
-	NotFound NotFoundHandler
-	Context  *BlacklistContext
+	DB         *ZerodropDB
+	Config     *ZerodropConfig
+	NotFound   NotFoundHandler
+	Context    *BlacklistContext
+	SignalChan chan Signal
 }
 
 // NewShotHandler constructs a new ShotHandler from the arguments.
-func NewShotHandler(db *ZerodropDB, config *ZerodropConfig, notfound NotFoundHandler) *ShotHandler {
+func NewShotHandler(db *ZerodropDB, config *ZerodropConfig, notfound NotFoundHandler, signals chan Signal) *ShotHandler {
 	ctx := &BlacklistContext{Databases: make(map[string]*ipcat.IntervalSet)}
 
 	if config.GeoDB != "" {
@@ -60,16 +61,17 @@ func NewShotHandler(db *ZerodropDB, config *ZerodropConfig, notfound NotFoundHan
 	}
 
 	return &ShotHandler{
-		DB:       db,
-		Config:   config,
-		NotFound: notfound,
-		Context:  ctx,
+		DB:         db,
+		Config:     config,
+		NotFound:   notfound,
+		Context:    ctx,
+		SignalChan: signals,
 	}
 }
 
 // Access returns the ZerodropEntry with the specified name as long as access
 // is permitted. The function returns nil otherwise.
-func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels int) *ZerodropEntry {
+func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels int, direct bool) *ZerodropEntry {
 	if name == "" {
 		return nil
 	}
@@ -78,6 +80,11 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 		log.Println("Exceeded redirection levels")
 	}
 	redirectLevels--
+
+	if name == a.Config.RedirectSelfDestruct {
+		a.SelfDestruct()
+		return nil
+	}
 
 	ip := RealRemoteIP(request)
 	if ip == nil {
@@ -114,7 +121,7 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 		if err := a.DB.Update(entry); err != nil {
 			log.Printf("Error adding to blacklist: %s", err.Error())
 		}
-		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels)
+		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels, false)
 	}
 
 	if entry.IsExpired() {
@@ -122,7 +129,7 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 		if err := a.DB.Update(entry); err != nil {
 			log.Println(err)
 		}
-		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels)
+		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels, false)
 	}
 
 	if !entry.AccessBlacklist.Allow(a.Context, ip) {
@@ -130,7 +137,7 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 		if err := a.DB.Update(entry); err != nil {
 			log.Println(err)
 		}
-		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels)
+		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels, false)
 	}
 
 	entry.AccessCount++
@@ -145,7 +152,7 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Get entry
 	name := strings.Trim(r.URL.Path, "/")
-	entry := a.Access(name, r, a.Config.RedirectLevels)
+	entry := a.Access(name, r, a.Config.RedirectLevels, true)
 
 	ip := RealRemoteIP(r)
 
@@ -209,4 +216,8 @@ func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	proxy.ServeHTTP(w, r)
+}
+
+func (a *ShotHandler) SelfDestruct() {
+	a.SignalChan <- SelfDestruct
 }

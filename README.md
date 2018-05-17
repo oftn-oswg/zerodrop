@@ -14,6 +14,7 @@ A utility for private redirects and proxies that disappear after being used once
 * Block or allow access based on GeoIP location
 * Block or allow access based on hostname matching (w/ regex)
 * Publish "secret" pages with UUID generation
+* Self-destruct action which removes and kills running binary; configurable.
 
 ## Blacklist
 

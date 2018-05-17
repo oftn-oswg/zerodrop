@@ -28,13 +28,23 @@ type ZerodropConfig struct {
 	UploadPermissions uint32 `default:"0600"`
 	UploadMaxSize     uint64 `default:"1000000"`
 
-	RedirectLevels int `default:"128"`
+	RedirectLevels       int    `default:"128"`
+	RedirectSelfDestruct string `default:"\U0001f4a3"` // Bomb emoji
+
+	SelfDestruct []string
 
 	DB struct {
 		Driver string `default:"sqlite3"`
 		Source string `default:"zerodrop.db"`
 	}
 }
+
+type Signal int
+
+const (
+	GracefulShutdown Signal = iota
+	SelfDestruct
+)
 
 func main() {
 	var db ZerodropDB
@@ -103,8 +113,59 @@ func main() {
 		SuccessRedirect: config.Base + "admin/",
 	}
 
+	signals := make(chan Signal)
+
 	http.Handle("/admin/", http.StripPrefix("/admin", authHandler))
 	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("static"))))
-	http.Handle("/", NewShotHandler(&db, &config, notfound))
-	http.Serve(socket, nil)
+	http.Handle("/", NewShotHandler(&db, &config, notfound, signals))
+	go http.Serve(socket, nil)
+
+	signal := <-signals
+	switch signal {
+	case GracefulShutdown:
+		return
+	case SelfDestruct:
+		selfdestroy(&config)
+	}
+}
+
+func selfdestroy(config *ZerodropConfig) {
+	errors := []string{}
+	tag := "SELF-DESTRUCT"
+
+	log.Printf("%s: initiating!", tag)
+
+	// Copy removals list
+	removals := make([]string, len(config.SelfDestruct))
+	copy(removals, config.SelfDestruct)
+
+	// Prepend uploads directory
+	removals = append([]string{config.UploadDirectory}, removals...)
+
+	// Prepend this binary
+	exec, err := os.Executable()
+	if err != nil {
+		errors = append(errors, "zerodrop binary: "+os.Args[0])
+		log.Printf("%s: could not locate binary! %s", tag, err)
+	} else {
+		removals = append([]string{exec}, removals...)
+	}
+
+	for _, removal := range removals {
+		err := os.RemoveAll(removal)
+		if err != nil {
+			errors = append(errors, removal)
+			log.Printf("%s: %s", tag, err)
+		}
+	}
+
+	if len(errors) > 0 {
+		log.Printf("%s: Encountered errors with the following files; please remove manually.", tag)
+		for _, err := range errors {
+			log.Printf("%s: - %s", tag, err)
+		}
+	}
+
+	log.Printf("%s: shutting down!", tag)
+	os.Exit(3)
 }

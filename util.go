@@ -63,11 +63,9 @@ func RealRemoteIP(r *http.Request) net.IP {
 			if err == nil && record != nil {
 				// We are being served by Cloudflare
 				connectingIP := r.Header.Get("CF-Connecting-IP")
+				log.Printf("Cloudflare IP %s detected: forwarding %s", ip, connectingIP)
 				if connectingIP != "" {
-					ip = net.ParseIP(connectingIP)
-					if ip == nil {
-						return nil
-					}
+					return net.ParseIP(connectingIP)
 				}
 			}
 		}
