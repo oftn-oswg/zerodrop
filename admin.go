@@ -27,8 +27,8 @@ type AdminHandler struct {
 
 // NewAdminHandler creates a new admin handler with the specified configuration
 // and loads the template files into cache.
-func NewAdminHandler(db *ZerodropDB, config *ZerodropConfig) *AdminHandler {
-	handler := &AdminHandler{DB: db, Config: config}
+func NewAdminHandler(app *ZerodropApp) *AdminHandler {
+	handler := &AdminHandler{DB: app.DB, Config: app.Config}
 
 	// Load templates
 	var allFiles []string

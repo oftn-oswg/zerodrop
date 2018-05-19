@@ -22,15 +22,14 @@ var headerCacheControl = "no-cache, no-store, must-revalidate"
 // ShotHandler serves the requested page and removes it from the database, or
 // returns 404 page if not available.
 type ShotHandler struct {
-	DB         *ZerodropDB
-	Config     *ZerodropConfig
-	NotFound   NotFoundHandler
-	Context    *BlacklistContext
-	SignalChan chan Signal
+	App     *ZerodropApp
+	Context *BlacklistContext
 }
 
 // NewShotHandler constructs a new ShotHandler from the arguments.
-func NewShotHandler(db *ZerodropDB, config *ZerodropConfig, notfound NotFoundHandler, signals chan Signal) *ShotHandler {
+func NewShotHandler(app *ZerodropApp) *ShotHandler {
+	config := app.Config
+
 	ctx := &BlacklistContext{Databases: make(map[string]*ipcat.IntervalSet)}
 
 	if config.GeoDB != "" {
@@ -61,11 +60,8 @@ func NewShotHandler(db *ZerodropDB, config *ZerodropConfig, notfound NotFoundHan
 	}
 
 	return &ShotHandler{
-		DB:         db,
-		Config:     config,
-		NotFound:   notfound,
-		Context:    ctx,
-		SignalChan: signals,
+		App:     app,
+		Context: ctx,
 	}
 }
 
@@ -81,7 +77,7 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 	}
 	redirectLevels--
 
-	if name == a.Config.RedirectSelfDestruct {
+	if name == a.App.Config.RedirectSelfDestruct {
 		a.SelfDestruct()
 		return nil
 	}
@@ -92,7 +88,7 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 		return nil
 	}
 
-	entry, err := a.DB.Get(name)
+	entry, err := a.App.DB.Get(name)
 	if err != nil {
 		return nil
 	}
@@ -118,7 +114,7 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 			}
 		}
 
-		if err := a.DB.Update(entry); err != nil {
+		if err := a.App.DB.Update(entry); err != nil {
 			log.Printf("Error adding to blacklist: %s", err.Error())
 		}
 		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels, false)
@@ -126,7 +122,7 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 
 	if entry.IsExpired() {
 		entry.AccessBlacklistCount++
-		if err := a.DB.Update(entry); err != nil {
+		if err := a.App.DB.Update(entry); err != nil {
 			log.Println(err)
 		}
 		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels, false)
@@ -134,14 +130,14 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 
 	if !entry.AccessBlacklist.Allow(a.Context, ip) {
 		entry.AccessBlacklistCount++
-		if err := a.DB.Update(entry); err != nil {
+		if err := a.App.DB.Update(entry); err != nil {
 			log.Println(err)
 		}
 		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels, false)
 	}
 
 	entry.AccessCount++
-	if err := a.DB.Update(entry); err != nil {
+	if err := a.App.DB.Update(entry); err != nil {
 		log.Println(err)
 	}
 
@@ -152,13 +148,13 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Get entry
 	name := strings.Trim(r.URL.Path, "/")
-	entry := a.Access(name, r, a.Config.RedirectLevels, true)
+	entry := a.Access(name, r, a.App.Config.RedirectLevels, true)
 
 	ip := RealRemoteIP(r)
 
 	if entry == nil {
 		log.Printf("Denied access to %s to %s", strconv.Quote(name), ip)
-		a.NotFound.ServeHTTP(w, r)
+		a.App.NotFound.ServeHTTP(w, r)
 		return
 	}
 
@@ -171,7 +167,7 @@ func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			contentType = "text/plain"
 		}
 
-		fullpath := filepath.Join(a.Config.UploadDirectory, entry.Filename)
+		fullpath := filepath.Join(a.App.Config.UploadDirectory, entry.Filename)
 		file, err := os.Open(fullpath)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
@@ -219,5 +215,5 @@ func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *ShotHandler) SelfDestruct() {
-	a.SignalChan <- SelfDestruct
+	a.App.SelfDestruct()
 }
