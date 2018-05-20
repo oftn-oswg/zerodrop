@@ -11,6 +11,9 @@ Use the following commands for a quick and easy demo of Zerodrop.
 go get github.com/oftn-oswg/zerodrop
 cd $GOPATH/src/oftn-oswg/zerodrop
 
+yarn install # or npm install
+yarn run dist # or npm run dist
+
 # EDIT config.yml to your liking.
 # REMEMBER to set up your secrets:
 # 1) authsecret: cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1

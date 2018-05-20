@@ -1,5 +1,6 @@
 const path = require('path');
-const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
+const webpack = require('webpack');
+const uglify = require('uglifyjs-webpack-plugin');
 
 module.exports = {
     entry: path.join(__dirname, 'typescript/Zerodrop.ts'),
@@ -21,7 +22,12 @@ module.exports = {
     },
     devtool: 'source-map',
     plugins: [
-        new UglifyJSPlugin({
+        new webpack.ProvidePlugin({
+            $: 'jquery',
+            jQuery: 'jquery',
+            Popper: 'popper.js'
+        }),
+        new uglify({
             sourceMap: true
         })
     ]

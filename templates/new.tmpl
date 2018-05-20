@@ -13,18 +13,18 @@
                 <div class="card-header">
                     <ul class="nav nav-tabs card-header-tabs">
                         <li class="nav-item">
-                            <a class="zd_nav nav-link active" id="url-tab" data-toggle="tab" href="#url" role="" aria-controls="url" aria-selected="true">
-                                <input id="form-url-tab" type="radio" name="source" checked hidden value="url" />URL
+                            <a class="zerodrop-nav nav-link active" id="url-tab" data-toggle="tab" href="#url" role="" aria-controls="url" aria-selected="true">
+                                <input type="radio" name="source" checked hidden value="url" />URL
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="zd_nav nav-link" id="file-tab" data-toggle="tab" href="#file" role="" aria-controls="file" aria-selected="false">
-                                <input id="form-file-tab" type="radio" name="source" hidden value="file" />File Upload
+                            <a class="zerodrop-nav nav-link" id="file-tab" data-toggle="tab" href="#file" role="" aria-controls="file" aria-selected="false">
+                                <input type="radio" name="source" hidden value="file" />File Upload
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="zd_nav nav-link" id="text-tab" data-toggle="tab" href="#text" role="" aria-controls="text" aria-selected="false">
-                                <input id="form-text-tab" type="radio" name="source" hidden value="text" />Textarea
+                            <a class="zerodrop-nav nav-link" id="text-tab" data-toggle="tab" href="#text" role="" aria-controls="text" aria-selected="false">
+                                <input type="radio" name="source" hidden value="text" />Textarea
                             </a>
                         </li>
                     </ul>
@@ -63,14 +63,14 @@
                                 <span class="input-group-text">Upload</span>
                             </div>
                             <div class="custom-file">
-                                <input name="file" type="file" class="custom-file-input" id="fileinput"/>
-                                <label class="custom-file-label" for="fileinput" id="fileinputname">Choose local file</label>
+                                <input name="file" type="file" class="custom-file-input zerodrop-file" data-name=".zerodrop-filename" data-mime=".zerodrop-filemime"/>
+                                <label class="custom-file-label zerodrop-filename" for="fileinput">Choose local file</label>
                             </div>
                         </div>
                         <div class="form-group row">
                             <label for="filemime" class="col-sm-2 col-form-label">Content-Type</label>
                             <div class="col-sm-10">
-                                <input name="file_type" type="text" class="form-control" id="filemime" placeholder="text/plain"/>
+                                <input name="file_type" type="text" class="form-control zerodrop-filemime" placeholder="text/plain"/>
                             </div>
                         </div>
                     </div>
@@ -128,9 +128,9 @@
                             <div class="input-group-prepend">
                                 <span class="input-group-text">{{$.Config.Base}}</span>
                             </div>
-                            <input type="text" id="publish" name="publish" class="form-control" />
+                            <input type="text" name="publish" class="form-control zerodrop-publish" />
                             <div class="input-group-append d-none d-md-block">
-                                <button type="button" class="btn btn-outline-secondary" onclick="uuid()">Generate UUID</button>
+                                <button type="button" class="btn btn-outline-secondary zerodrop-uuid" data-field=".zerodrop-publish">Generate UUID</button>
                             </div>
                         </div>
                         <div class="col-sm-2">
@@ -140,37 +140,5 @@
                 </div>
             </div>
         </form>
-<script>
-function uuid() {
-    document.getElementById('publish').value = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
-
-var fileinput = document.getElementById('fileinput');
-var fileinputname = document.getElementById('fileinputname');
-var filemime = document.getElementById('filemime');
-var usermime = "";
-fileinput.addEventListener('change', function(event) {
-    var file = fileinput.files[0];
-    fileinputname.textContent = file.name;
-    if (filemime.value === "" || filemime.value === usermime) {
-        usermime = file.type;
-        filemime.value = usermime;
-    }
-});
-
-var navs = document.querySelectorAll('.zd_nav');
-var form = document.getElementById('form-new');
-for (var i = 0; i < navs.length; i++) {
-    (function(nav) {
-        nav.addEventListener('click', function() {
-            var radio = document.getElementById('form-' + nav.id);
-            radio.checked = true;
-        });
-    }(navs[i]));
-}
-</script>
 {{- template "footer" $ -}}
 {{end}}
