@@ -4,4 +4,7 @@ zerodrop
 *.sock
 
 # Uploads folder
-uploads/
+/uploads/
+
+# Webpack
+/node_modules/

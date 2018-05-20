@@ -1,0 +1,8 @@
+{
+    "compilerOptions": {
+        "outDir": "./static/",
+        "noImplicitAny": true,
+        "module": "es6",
+        "target": "es5"
+    }
+}

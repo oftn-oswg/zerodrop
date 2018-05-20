@@ -1,0 +1,21 @@
+{
+  "name": "zerodrop",
+  "version": "0.1",
+  "description": "A stealth URL toolkit optimized for dropping malware and circumventing censorship filters",
+  "main": "index.js",
+  "repository": "git@github.com:oftn-oswg/zerodrop.git",
+  "author": "Devin Samarin <me@dsamar.in>",
+  "license": "MIT",
+  "private": true,
+  "devDependencies": {
+    "ts-loader": "^4.3.0",
+    "typescript": "^2.8.3",
+    "uglifyjs-webpack-plugin": "^1.2.5",
+    "webpack": "^4.8.3",
+    "webpack-cli": "^2.1.3"
+  },
+  "scripts": {
+    "build": "webpack --mode development",
+    "dist": "webpack --mode production"
+  }
+}
