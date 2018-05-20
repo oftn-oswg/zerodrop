@@ -25,7 +25,10 @@ func main() {
 	log.Printf("Loaded configuration: %#v", config)
 
 	app := NewZerodropApp(&config)
-	app.Start()
+	err := app.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	signalChan := make(chan os.Signal)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)

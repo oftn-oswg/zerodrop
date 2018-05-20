@@ -74,7 +74,7 @@ func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := &AdminPageData{Title: "Zerodrop Login", Config: a.Config}
-	loginTmpl := a.Templates.Lookup("admin-login.tmpl")
+	loginTmpl := a.Templates.Lookup("login.tmpl")
 	err := loginTmpl.ExecuteTemplate(w, "login", data)
 	if err != nil {
 		log.Println(err)
@@ -180,7 +180,7 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := &AdminPageData{Title: "Zerodrop New", LoggedIn: true, Config: a.Config}
-	loginTmpl := a.Templates.Lookup("admin-new.tmpl")
+	loginTmpl := a.Templates.Lookup("new.tmpl")
 	err := loginTmpl.ExecuteTemplate(w, "new", data)
 	if err != nil {
 		log.Println(err)
@@ -236,7 +236,7 @@ func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
 	var err error
 	data.Entries, err = a.DB.List()
 
-	interfaceTmpl := a.Templates.Lookup("admin-main.tmpl")
+	interfaceTmpl := a.Templates.Lookup("main.tmpl")
 	if interfaceTmpl.ExecuteTemplate(w, "main", data) != nil {
 		log.Println(err)
 	}

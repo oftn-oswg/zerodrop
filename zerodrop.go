@@ -3,11 +3,10 @@ package main
 import (
 	"context"
 	"log"
-	"net"
 	"net/http"
 	"os"
-	"os/user"
-	"strconv"
+
+	"github.com/oftn-oswg/socket"
 )
 
 // ZerodropConfig holds the configuration for an application instance.
@@ -78,36 +77,10 @@ func (z *ZerodropApp) Start() error {
 	config := z.Config
 	db := z.DB
 
-	network, address := ParseSocketName(config.Listen)
-
-	if network == "unix" {
-		os.Remove(address)
-	}
-
-	socket, err := net.Listen(network, address)
+	network, address := socket.Parse(config.Listen)
+	socket, err := socket.Listen(network, address, 0660)
 	if err != nil {
 		return err
-	}
-	defer socket.Close()
-
-	if network == "unix" {
-		if config.Group != "" {
-			uid := os.Geteuid()
-			group, err := user.LookupGroup(config.Group)
-			if err != nil {
-				return err
-			}
-			gid, err := strconv.Atoi(group.Gid)
-			if err != nil {
-				return err
-			}
-			if err := os.Chown(address, uid, gid); err != nil {
-				return err
-			}
-		}
-		if err := os.Chmod(address, 0660); err != nil {
-			return err
-		}
 	}
 
 	if err := db.Connect(config.DB.Driver, config.DB.Source); err != nil {

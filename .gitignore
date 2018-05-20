@@ -8,3 +8,6 @@ zerodrop
 
 # Webpack
 /node_modules/
+
+# IDEs
+/.vscode/
