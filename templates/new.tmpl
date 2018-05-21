@@ -1,147 +1,150 @@
 {{define "new"}}
 {{- template "header" $ -}}
-        <ul class="nav nav-pills mb-3">
-            <li class="nav-item">
-                <a class="nav-link" href="{{$.Config.Base}}admin/">My Entries</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link active" href="{{$.Config.Base}}admin/new">New</a>
-            </li>
-        </ul>
-        {{if $.Error}}
-        <div class="alert alert-danger" role="alert">{{$.Error}}</div>
-        {{end}}
-        <form id="form-new" enctype="multipart/form-data" method="post">
-            <div class="card mb-3 zd_form_source">
-                <div class="card-header">
-                    <ul class="nav nav-tabs card-header-tabs">
-                        <li class="nav-item">
-                            <a class="zerodrop-nav nav-link active" id="url-tab" data-toggle="tab" href="#url" role="" aria-controls="url" aria-selected="true">
-                                <input type="radio" name="source" checked hidden value="url" />URL
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="zerodrop-nav nav-link" id="file-tab" data-toggle="tab" href="#file" role="" aria-controls="file" aria-selected="false">
-                                <input type="radio" name="source" hidden value="file" />File Upload
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="zerodrop-nav nav-link" id="text-tab" data-toggle="tab" href="#text" role="" aria-controls="text" aria-selected="false">
-                                <input type="radio" name="source" hidden value="text" />Textarea
-                            </a>
-                        </li>
-                    </ul>
+<ul class="nav nav-pills mb-3">
+    <li class="nav-item">
+        <a class="nav-link" href="{{$.Config.Base}}admin/">All Entries</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="{{$.Config.Base}}admin/my">My Entries</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link active" href="{{$.Config.Base}}admin/new">New</a>
+    </li>
+</ul>
+{{if $.Error}}
+<div class="alert alert-danger" role="alert">{{$.Error}}</div>
+{{end}}
+<form id="form-new" enctype="multipart/form-data" method="post">
+    <div class="card mb-3 zd_form_source">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs">
+                <li class="nav-item">
+                    <a class="zerodrop-nav nav-link active" id="url-tab" data-toggle="tab" href="#url" role="" aria-controls="url" aria-selected="true">
+                        <input type="radio" name="source" checked hidden value="url" />URL
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="zerodrop-nav nav-link" id="file-tab" data-toggle="tab" href="#file" role="" aria-controls="file" aria-selected="false">
+                        <input type="radio" name="source" hidden value="file" />File Upload
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="zerodrop-nav nav-link" id="text-tab" data-toggle="tab" href="#text" role="" aria-controls="text" aria-selected="false">
+                        <input type="radio" name="source" hidden value="text" />Textarea
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body tab-content" id="zd_form_source_panel">
+            <div class="tab-pane show active" id="url" role="tabpanel">
+                <!-- URL Source -->
+                <div class="form-group">
+                    <input name="url" type="url" class="form-control form-control-lg" placeholder="https://" />
                 </div>
-                <div class="card-body tab-content" id="zd_form_source_panel">
-                    <div class="tab-pane show active" id="url" role="tabpanel">
-                        <!-- URL Source -->
-                        <div class="form-group">
-                            <input name="url" type="url" class="form-control form-control-lg" placeholder="https://" />
-                        </div>
-                        <div class="form-group">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="url_type" id="url_type_proxy" value="proxy" checked/>
-                                <label class="form-check-label" for="url_type_proxy">
-                                    Proxy
-                                    <small class="form-text text-muted">
-                                        Hides the source URL by acting as a proxy.
-                                    </small>
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="url_type" id="url_type_redirection" value="redirect"/>
-                                <label class="form-check-label" for="url_type_redirection">
-                                    Redirection
-                                    <small class="form-text text-muted">
-                                        Performs a 307 HTTP redirection to the specified URL.
-                                    </small>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="tab-pane" id="file" role="tabpanel">
-                        <!-- File Source -->
-                        <div class="input-group mb-3">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text">Upload</span>
-                            </div>
-                            <div class="custom-file">
-                                <input name="file" type="file" class="custom-file-input zerodrop-file" data-name=".zerodrop-filename" data-mime=".zerodrop-filemime"/>
-                                <label class="custom-file-label zerodrop-filename" for="fileinput">Choose local file</label>
-                            </div>
-                        </div>
-                        <div class="form-group row">
-                            <label for="filemime" class="col-sm-2 col-form-label">Content-Type</label>
-                            <div class="col-sm-10">
-                                <input name="file_type" type="text" class="form-control zerodrop-filemime" placeholder="text/plain"/>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="tab-pane" id="text" role="tabpanel">
-                        <!-- Text Source -->
-                        <div class="form-group">
-                            <textarea name="text" class="form-control" id="source_text" rows="8" style="font-family: Consolas, Lucida Console, monospace;"></textarea>
-                        </div>
-                        <div class="form-group row">
-                            <label for="source_content_type" class="col-sm-2 col-form-label">Content-Type</label>
-                            <div class="col-sm-10">
-                                <input name="text_type" type="text" class="form-control" id="source_content_type" placeholder="text/plain">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="card mb-3 zd_form_access">
-                <div class="card-body">
-                    <div class="input-group mb-3">
-                        <div class="input-group-prepend">
-                            <div class="input-group-text">
-                                <input type="checkbox" id="access_expire" name="access_expire" />
-                            </div>
-                        </div>
-                        <div class="input-group-prepend">
-                            <label class="input-group-text" for="access_expire">Expire <span class="d-none d-md-inline">&nbsp;access to the page&nbsp;</span> after</label>
-                        </div>
-                        <input name="access_expire_count" type="number" class="form-control" value="1" step="1" min="0" />
-                        <div class="input-group-append">
-                            <span class="input-group-text">request(s).</span>
-                        </div>
-                    </div>
-                    <div class="form-group row">
-                        <label for="access_blacklist" class="col-sm-2 col-form-label">Blacklist</label>
-                        <div class="col-sm-10">
-                            <textarea class="form-control bg-dark text-white" style="font-family: Consolas, Lucida Console, monospace;" id="access_blacklist" name="blacklist" rows="6"></textarea>
-                        </div>
-                    </div>
-                    <div class="form-group row">
-                        <label for="access_redirect_on_deny" class="col-sm-2 col-form-label">Redirect On Deny</label>
-                        <div class="col-sm-10">
-                            <input class="form-control" id="access_redirect_on_deny" name="access_redirect_on_deny" />
+                <div class="form-group">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="url_type" id="url_type_proxy" value="proxy" checked/>
+                        <label class="form-check-label" for="url_type_proxy">
+                            Proxy
                             <small class="form-text text-muted">
-                                Entry to redirect to once the page expires or the user has been blacklisted.
+                                Hides the source URL by acting as a proxy.
                             </small>
-                        </div>
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="url_type" id="url_type_redirection" value="redirect"/>
+                        <label class="form-check-label" for="url_type_redirection">
+                            Redirection
+                            <small class="form-text text-muted">
+                                Performs a 307 HTTP redirection to the specified URL.
+                            </small>
+                        </label>
                     </div>
                 </div>
             </div>
-            <div class="card mb-3 zd_form_publish">
-                <div class="card-body">
-                    <div class="form-group row">
-                        <div class="input-group col-sm-10">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text">{{$.Config.Base}}</span>
-                            </div>
-                            <input type="text" name="publish" class="form-control zerodrop-publish" />
-                            <div class="input-group-append d-none d-md-block">
-                                <button type="button" class="btn btn-outline-secondary zerodrop-uuid" data-field=".zerodrop-publish">Generate UUID</button>
-                            </div>
-                        </div>
-                        <div class="col-sm-2">
-                            <button type="submit" class="btn btn-primary btn-block">Publish</button>
-                        </div>
+            <div class="tab-pane" id="file" role="tabpanel">
+                <!-- File Source -->
+                <div class="input-group mb-3">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">Upload</span>
+                    </div>
+                    <div class="custom-file">
+                        <input name="file" type="file" class="custom-file-input zerodrop-file" data-name=".zerodrop-filename" data-mime=".zerodrop-filemime"/>
+                        <label class="custom-file-label zerodrop-filename" for="fileinput">Choose local file</label>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label for="filemime" class="col-sm-2 col-form-label">Content-Type</label>
+                    <div class="col-sm-10">
+                        <input name="file_type" type="text" class="form-control zerodrop-filemime" placeholder="text/plain"/>
                     </div>
                 </div>
             </div>
-        </form>
+            <div class="tab-pane" id="text" role="tabpanel">
+                <!-- Text Source -->
+                <div class="form-group">
+                    <textarea name="text" class="form-control" id="source_text" rows="8" style="font-family: Consolas, Lucida Console, monospace;"></textarea>
+                </div>
+                <div class="form-group row">
+                    <label for="source_content_type" class="col-sm-2 col-form-label">Content-Type</label>
+                    <div class="col-sm-10">
+                        <input name="text_type" type="text" class="form-control" id="source_content_type" placeholder="text/plain">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card mb-3 zd_form_access">
+        <div class="card-body">
+            <div class="input-group mb-3">
+                <div class="input-group-prepend">
+                    <div class="input-group-text">
+                        <input type="checkbox" id="access_expire" name="access_expire" />
+                    </div>
+                </div>
+                <div class="input-group-prepend">
+                    <label class="input-group-text" for="access_expire">Expire <span class="d-none d-md-inline">&nbsp;access to the page&nbsp;</span> after</label>
+                </div>
+                <input name="access_expire_count" type="number" class="form-control" value="1" step="1" min="0" />
+                <div class="input-group-append">
+                    <span class="input-group-text">request(s).</span>
+                </div>
+            </div>
+            <div class="form-group row">
+                <label for="access_blacklist" class="col-sm-2 col-form-label">Blacklist</label>
+                <div class="col-sm-10">
+                    <textarea class="form-control bg-dark text-white" style="font-family: Consolas, Lucida Console, monospace;" id="access_blacklist" name="blacklist" rows="6"></textarea>
+                </div>
+            </div>
+            <div class="form-group row">
+                <label for="access_redirect_on_deny" class="col-sm-2 col-form-label">Redirect On Deny</label>
+                <div class="col-sm-10">
+                    <input class="form-control" id="access_redirect_on_deny" name="access_redirect_on_deny" />
+                    <small class="form-text text-muted">
+                        Entry to redirect to once the page expires or the user has been blacklisted.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card mb-3 zd_form_publish">
+        <div class="card-body">
+            <div class="form-group row">
+                <div class="input-group col-sm-10">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">{{$.Config.Base}}</span>
+                    </div>
+                    <input type="text" name="publish" class="form-control zerodrop-publish" />
+                    <div class="input-group-append d-none d-md-block">
+                        <button type="button" class="btn btn-outline-secondary zerodrop-uuid" data-field=".zerodrop-publish">Generate UUID</button>
+                    </div>
+                </div>
+                <div class="col-sm-2">
+                    <button type="submit" class="btn btn-primary btn-block">Publish</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
 {{- template "footer" $ -}}
 {{end}}

@@ -1,8 +1,7 @@
 // Import page dependencies
 import * as $ from 'jquery';
-import 'bootstrap/js/src/util'
-import 'bootstrap/js/src/dropdown'
-import 'bootstrap/js/src/tab'
+import 'bootstrap/js/src/util';
+import 'bootstrap/js/src/tab';
 
 function humanFileSize(bytes: number, si: boolean): string {
     const thresh = si ? 1000 : 1024;
@@ -10,7 +9,7 @@ function humanFileSize(bytes: number, si: boolean): string {
         return bytes + ' B';
     }
     const units = si
-        ? ['kB','MB','GB','TB','PB','EB','ZB','YB']
+        ? ['KB','MB','GB','TB','PB','EB','ZB','YB']
         : ['KiB','MiB','GiB','TiB','PiB','EiB','ZiB','YiB'];
     let u = -1;
     do {
@@ -34,7 +33,7 @@ $(() => {
     $('.zerodrop-file').change((event: JQuery.Event) => {
         const element = $(event.currentTarget);
         const file = (<FileList>element.prop('files'))[0];
-        $(element.data('name')).text(`${file.name} (${humanFileSize(file.size, false)})`);
+        $(element.data('name')).text(`${file.name} (${humanFileSize(file.size, true)})`);
         $(element.data('mime')).val(file.type);
     });
     

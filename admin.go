@@ -81,6 +81,7 @@ func NewAdminHandler(app *ZerodropApp) (*AdminHandler, error) {
 	handler.HandleFunc("/admin/login", handler.ServeLogin)
 	handler.HandleFunc("/admin/logout", handler.ServeLogout)
 	handler.HandleFunc("/admin/new", handler.ServeNew)
+	handler.HandleFunc("/admin/my", handler.ServeMy)
 	handler.HandleFunc("/admin/", handler.ServeMain)
 
 	return handler, nil
@@ -294,6 +295,62 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 }
 
 // ServeMain serves the entry list.
+func (a *AdminHandler) ServeMy(w http.ResponseWriter, r *http.Request) {
+	claims, _ := a.verify(r)
+	data := &AdminPageData{Title: "Zerodrop Admin", Claims: claims, Config: a.App.Config}
+
+	if r.Method == "POST" {
+		r.ParseForm()
+
+		switch r.FormValue("action") {
+
+		case "train":
+			name := r.FormValue("name")
+			entry, err := a.App.DB.Get(name)
+			if err != nil {
+				log.Println(err)
+			} else {
+				entry.SetTraining(!entry.AccessTrain)
+				if err := a.App.DB.Update(entry); err != nil {
+					log.Println(err)
+				}
+			}
+
+		case "delete":
+			name := r.FormValue("name")
+			if name != "" {
+				err := a.App.DB.Remove(name)
+				if err != nil {
+					log.Println(err)
+				} else {
+					log.Printf("Removed entry: %s", name)
+				}
+			}
+
+		case "clear":
+			err := a.App.DB.Clear()
+			if err != nil {
+				log.Println(err)
+			} else {
+				log.Println("Cleared all entries")
+			}
+
+		}
+
+		http.Redirect(w, r, a.App.Config.Base+"admin/", 302)
+		return
+	}
+
+	var err error
+	data.Entries, err = a.App.DB.List()
+
+	interfaceTmpl := a.Templates.Lookup("my.tmpl")
+	if interfaceTmpl.ExecuteTemplate(w, "my", data) != nil {
+		log.Println(err)
+	}
+}
+
+// ServeMain serves the entry list.
 func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
 	claims, _ := a.verify(r)
 	data := &AdminPageData{Title: "Zerodrop Admin", Claims: claims, Config: a.App.Config}
@@ -343,8 +400,8 @@ func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
 	var err error
 	data.Entries, err = a.App.DB.List()
 
-	interfaceTmpl := a.Templates.Lookup("main.tmpl")
-	if interfaceTmpl.ExecuteTemplate(w, "main", data) != nil {
+	interfaceTmpl := a.Templates.Lookup("all.tmpl")
+	if interfaceTmpl.ExecuteTemplate(w, "all", data) != nil {
 		log.Println(err)
 	}
 }
