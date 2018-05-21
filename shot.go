@@ -148,6 +148,11 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Get entry
 	name := strings.Trim(r.URL.Path, "/")
+	if name == "" {
+		http.Redirect(w, r, "/admin/", 308)
+		return
+	}
+
 	entry := a.Access(name, r, a.App.Config.RedirectLevels, true)
 
 	ip := RealRemoteIP(r)
