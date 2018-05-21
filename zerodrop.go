@@ -47,14 +47,17 @@ type ZerodropApp struct {
 	NotFound     *NotFoundHandler
 }
 
-func NewZerodropApp(config *ZerodropConfig) *ZerodropApp {
-	app := &ZerodropApp{
+func NewZerodropApp(config *ZerodropConfig) (app *ZerodropApp, err error) {
+	app = &ZerodropApp{
 		Config: config,
 		Server: &http.Server{},
 		DB:     &ZerodropDB{},
 	}
 
-	app.AdminHandler = NewAdminHandler(app)
+	app.AdminHandler, err = NewAdminHandler(app)
+	if err != nil {
+		return nil, err
+	}
 	app.AuthHandler = &AuthHandler{
 		Credentials: AuthCredentials{
 			Digest: config.AuthDigest,
@@ -70,7 +73,7 @@ func NewZerodropApp(config *ZerodropConfig) *ZerodropApp {
 	app.ShotHandler = NewShotHandler(app)
 	app.NotFound = &NotFoundHandler{}
 
-	return app
+	return app, nil
 }
 
 func (z *ZerodropApp) Start() error {
@@ -88,8 +91,7 @@ func (z *ZerodropApp) Start() error {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/admin/", http.StripPrefix("/admin", z.AuthHandler))
-	mux.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("static"))))
+	mux.Handle("/admin/", z.AdminHandler)
 	mux.Handle("/", z.ShotHandler)
 
 	z.Server.Handler = mux

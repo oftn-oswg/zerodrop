@@ -20,8 +20,8 @@ function humanFileSize(bytes: number, si: boolean): string {
     return bytes.toFixed(1)+' '+units[u];
 }
 
-// Check for a "Generate UUID" button on the page.
 $(() => {
+    // Check for a "Generate UUID" button on the page.
     $('.zerodrop-uuid').click((event: JQuery.Event) => {
         const element = $(event.currentTarget);
         $(element.data('field')).val('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {

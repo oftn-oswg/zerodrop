@@ -24,9 +24,11 @@ func main() {
 	configor.Load(&config, configFile)
 	log.Printf("Loaded configuration: %#v", config)
 
-	app := NewZerodropApp(&config)
-	err := app.Start()
+	app, err := NewZerodropApp(&config)
 	if err != nil {
+		log.Fatal(err)
+	}
+	if err := app.Start(); err != nil {
 		log.Fatal(err)
 	}
 

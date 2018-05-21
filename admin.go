@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -27,33 +28,40 @@ type AdminHandler struct {
 
 // NewAdminHandler creates a new admin handler with the specified configuration
 // and loads the template files into cache.
-func NewAdminHandler(app *ZerodropApp) *AdminHandler {
+func NewAdminHandler(app *ZerodropApp) (*AdminHandler, error) {
+	templateDirectory := "./templates"
+	staticDirectory := "./static"
+
 	handler := &AdminHandler{DB: app.DB, Config: app.Config}
 
 	// Load templates
-	var allFiles []string
-	files, err := ioutil.ReadDir("./templates")
+	templateFiles := []string{}
+	files, err := ioutil.ReadDir(templateDirectory)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	for _, file := range files {
 		filename := file.Name()
 		if strings.HasSuffix(filename, ".tmpl") {
-			allFiles = append(allFiles, "./templates/"+filename)
+			templateFiles = append(templateFiles,
+				path.Join(templateDirectory, filename))
 		}
 	}
 
-	handler.Templates, err = template.ParseFiles(allFiles...)
+	handler.Templates, err = template.ParseFiles(templateFiles...)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// Create ServeMux
-	handler.Mux = http.NewServeMux()
-	handler.Mux.HandleFunc("/new", handler.ServeNew)
-	handler.Mux.HandleFunc("/", handler.ServeMain)
+	mux := http.NewServeMux()
+	mux.Handle("/admin/static/",
+		http.StripPrefix("/admin/static", http.FileServer(http.Dir(staticDirectory))))
+	mux.HandleFunc("/admin/new", handler.ServeNew)
+	mux.HandleFunc("/admin/", handler.ServeMain)
+	handler.Mux = mux
 
-	return handler
+	return handler, nil
 }
 
 // AdminPageData represents the data served to the admin templates.
