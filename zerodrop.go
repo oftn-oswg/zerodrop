@@ -42,7 +42,6 @@ type ZerodropApp struct {
 	DB     *ZerodropDB
 
 	AdminHandler *AdminHandler
-	AuthHandler  *AuthHandler
 	ShotHandler  *ShotHandler
 	NotFound     *NotFoundHandler
 }
@@ -57,18 +56,6 @@ func NewZerodropApp(config *ZerodropConfig) (app *ZerodropApp, err error) {
 	app.AdminHandler, err = NewAdminHandler(app)
 	if err != nil {
 		return nil, err
-	}
-	app.AuthHandler = &AuthHandler{
-		Credentials: AuthCredentials{
-			Digest: config.AuthDigest,
-			Secret: []byte(config.AuthSecret),
-		},
-
-		Success: app.AdminHandler,
-		Failure: http.HandlerFunc(app.AdminHandler.ServeLogin),
-
-		FailureRedirect: config.Base + "admin/login?err=1",
-		SuccessRedirect: config.Base + "admin/",
 	}
 	app.ShotHandler = NewShotHandler(app)
 	app.NotFound = &NotFoundHandler{}

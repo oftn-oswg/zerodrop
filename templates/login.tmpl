@@ -5,8 +5,8 @@
         <div class="card">
             <div class="card-header">Zerodrop Login</div>
             <div class="card-body">
-                {{if .Error}}
-                <div class="alert alert-danger" role="alert">{{.Error | html}}</div>
+                {{if $.Error}}
+                <div class="alert alert-danger" role="alert">{{$.Error}}</div>
                 {{end}}
                 <form method="post">
                     <div class="form-group">

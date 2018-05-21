@@ -13,8 +13,10 @@
 <body>
     <div class="container">
         <div class="my-5">
-            {{if $.LoggedIn}}
+            {{if $.Claims}}
             <a role="button" href="{{$.Config.Base}}admin/logout" class="btn btn-sm btn-outline-secondary float-right">Logout</a>
+            {{else}}
+            <a role="button" href="{{$.Config.Base}}admin/login" class="btn btn-sm btn-outline-secondary float-right">Login</a>
             {{end}}
             <h1 class="display-4">Zerodrop
                 <span class="lead d-none d-md-inline">Private content server</span>

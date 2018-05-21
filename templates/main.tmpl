@@ -8,10 +8,13 @@
         <a class="nav-link" href="{{$.Config.Base}}admin/new">New</a>
     </li>
 </ul>
+{{if $.Error}}
+<div class="alert alert-danger" role="alert">{{$.Error}}</div>
+{{end}}
 <div class="card mb-5">
-    {{if .Entries}}
+    {{if $.Entries}}
     <ul class="list-group list-group-flush">
-        {{range .Entries}}
+        {{range $.Entries}}
         <li class="list-group-item{{if .AccessTrain}} list-group-item-warning{{end}}">
             <form method="post">
                 <input type="hidden" name="name" value="{{.Name}}"/>

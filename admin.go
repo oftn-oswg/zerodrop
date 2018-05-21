@@ -1,10 +1,16 @@
 package main
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
+	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,16 +20,33 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
+
 	uuid "github.com/satori/go.uuid"
 )
 
 // AdminHandler serves the administration page, or asks for credentials if not
 // already authenticated.
 type AdminHandler struct {
-	DB        *ZerodropDB
-	Config    *ZerodropConfig
+	http.ServeMux
+
+	App       *ZerodropApp
 	Templates *template.Template
-	Mux       *http.ServeMux
+}
+
+// AdminClaims represents the claims of the JWT (JSON Web Token)
+type AdminClaims struct {
+	Admin bool `json:"admin"`
+	jwt.StandardClaims
+}
+
+// AdminPageData represents the data served to the admin templates.
+type AdminPageData struct {
+	Error   string
+	Title   string
+	Claims  *AdminClaims
+	Config  *ZerodropConfig
+	Entries []*ZerodropEntry
 }
 
 // NewAdminHandler creates a new admin handler with the specified configuration
@@ -32,7 +55,7 @@ func NewAdminHandler(app *ZerodropApp) (*AdminHandler, error) {
 	templateDirectory := "./templates"
 	staticDirectory := "./static"
 
-	handler := &AdminHandler{DB: app.DB, Config: app.Config}
+	handler := &AdminHandler{App: app}
 
 	// Load templates
 	templateFiles := []string{}
@@ -53,35 +76,99 @@ func NewAdminHandler(app *ZerodropApp) (*AdminHandler, error) {
 		return nil, err
 	}
 
-	// Create ServeMux
-	mux := http.NewServeMux()
-	mux.Handle("/admin/static/",
+	handler.Handle("/admin/static/",
 		http.StripPrefix("/admin/static", http.FileServer(http.Dir(staticDirectory))))
-	mux.HandleFunc("/admin/new", handler.ServeNew)
-	mux.HandleFunc("/admin/", handler.ServeMain)
-	handler.Mux = mux
+	handler.HandleFunc("/admin/login", handler.ServeLogin)
+	handler.HandleFunc("/admin/logout", handler.ServeLogout)
+	handler.HandleFunc("/admin/new", handler.ServeNew)
+	handler.HandleFunc("/admin/", handler.ServeMain)
 
 	return handler, nil
 }
 
-// AdminPageData represents the data served to the admin templates.
-type AdminPageData struct {
-	Error    string
-	Title    string
-	LoggedIn bool
-	Config   *ZerodropConfig
-	Entries  []*ZerodropEntry
+// verify returns any claims present in the request
+func (a *AdminHandler) verify(r *http.Request) (*AdminClaims, error) {
+	if cookie, err := r.Cookie("jwt"); err == nil {
+		token, err := jwt.ParseWithClaims(cookie.Value, &AdminClaims{},
+			func(token *jwt.Token) (interface{}, error) {
+				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+				}
+				return []byte(a.App.Config.AuthSecret), nil
+			})
+		if claims, ok := token.Claims.(*AdminClaims); ok && token.Valid {
+			if claims.Admin {
+				return claims, nil
+			}
+		} else {
+			return nil, fmt.Errorf("Unknown error parsing validation cookie: %s", err.Error())
+		}
+	}
+
+	return nil, nil
+}
+
+// validate scans the request for credentials and generates a auth token
+func (a *AdminHandler) validate(w http.ResponseWriter, r *http.Request) error {
+	r.ParseForm()
+
+	creds, ok := r.Form["credentials"]
+	if !ok || len(creds) < 1 {
+		return errors.New("No credentials provided")
+	}
+
+	validDigestBytes, err := hex.DecodeString(a.App.Config.AuthDigest)
+	if err != nil {
+		return err
+	}
+
+	digest := sha256.Sum256([]byte(creds[0]))
+
+	time.Sleep(2*time.Second + time.Duration(rand.Intn(2000)-1000)*time.Millisecond)
+	if subtle.ConstantTimeCompare(validDigestBytes, digest[:]) == 1 {
+
+		// Authentication successful; set cookie
+		exp := time.Now().Add(time.Hour * time.Duration(24)).Unix()
+		claims := AdminClaims{Admin: true, StandardClaims: jwt.StandardClaims{ExpiresAt: exp}}
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		tokenString, err := token.SignedString([]byte(a.App.Config.AuthSecret))
+		if err != nil {
+			return err
+		}
+
+		http.SetCookie(w, &http.Cookie{
+			Name:   "jwt",
+			Value:  tokenString,
+			MaxAge: 24 * 60 * 60, // 1 day
+			// Secure: true,
+		})
+
+		return nil
+	}
+
+	return errors.New("Invalid password")
 }
 
 // ServeLogin renders the login page.
 func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request) {
-	page := a.Config.Base + "admin/login"
-	if r.URL.Path != "/login" {
-		http.Redirect(w, r, page, 302)
+	if r.Method == "POST" {
+		ip := RealRemoteIP(r)
+		err := a.validate(w, r)
+		if err != nil {
+			// Failed authentication
+			log.Printf("Failed authentication by %s: %s", ip, err)
+			http.Redirect(w, r, "/admin/login?err=1", 302)
+			return
+		}
+
+		// Successful authentication
+		log.Printf("Successful authentication by %s", ip)
+		http.Redirect(w, r, "/admin/", 302)
 		return
 	}
 
-	data := &AdminPageData{Title: "Zerodrop Login", Config: a.Config}
+	claims, _ := a.verify(r)
+	data := &AdminPageData{Title: "Zerodrop Login", Claims: claims, Config: a.App.Config}
 	loginTmpl := a.Templates.Lookup("login.tmpl")
 	err := loginTmpl.ExecuteTemplate(w, "login", data)
 	if err != nil {
@@ -89,10 +176,20 @@ func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ServeLogout renders the logout page.
+func (a *AdminHandler) ServeLogout(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:    "jwt",
+		Value:   "",
+		Expires: time.Unix(0, 0),
+	})
+	http.Redirect(w, r, "/admin/", 302)
+}
+
 // ServeNew renders the new entry page.
 func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
-		err := r.ParseMultipartForm(int64(a.Config.UploadMaxSize))
+		err := r.ParseMultipartForm(int64(a.App.Config.UploadMaxSize))
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -126,9 +223,9 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 			defer file.Close()
 
 			filename := url.PathEscape(entry.Name)
-			fullpath := filepath.Join(a.Config.UploadDirectory, filename)
+			fullpath := filepath.Join(a.App.Config.UploadDirectory, filename)
 
-			perms := os.FileMode(a.Config.UploadPermissions)
+			perms := os.FileMode(a.App.Config.UploadPermissions)
 			out, err := os.OpenFile(fullpath, os.O_WRONLY|os.O_CREATE, perms)
 			if err != nil {
 				http.Error(w, err.Error(), 500)
@@ -147,9 +244,9 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 
 		case "text":
 			filename := url.PathEscape(entry.Name)
-			fullpath := filepath.Join(a.Config.UploadDirectory, filename)
+			fullpath := filepath.Join(a.App.Config.UploadDirectory, filename)
 
-			perms := os.FileMode(a.Config.UploadPermissions)
+			perms := os.FileMode(a.App.Config.UploadPermissions)
 			out, err := os.OpenFile(fullpath, os.O_WRONLY|os.O_CREATE, perms)
 			if err != nil {
 				http.Error(w, err.Error(), 500)
@@ -174,20 +271,21 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 		// Access information
 		entry.AccessExpire = r.FormValue("access_expire") != ""
 		entry.AccessExpireCount, _ = strconv.Atoi(r.FormValue("access_expire_count"))
-		entry.AccessBlacklist = ParseBlacklist(r.FormValue("blacklist"), a.Config.IPCat)
+		entry.AccessBlacklist = ParseBlacklist(r.FormValue("blacklist"), a.App.Config.IPCat)
 		entry.AccessRedirectOnDeny = strings.TrimSpace(r.FormValue("access_redirect_on_deny"))
 
-		if err := a.DB.Update(entry); err != nil {
+		if err := a.App.DB.Update(entry); err != nil {
 			log.Printf("Error creating entry %s: %s", entry.Name, err)
 		} else {
 			log.Printf("Created entry %s", entry)
 		}
 
-		http.Redirect(w, r, a.Config.Base+"admin/", 302)
+		http.Redirect(w, r, a.App.Config.Base+"admin/", 302)
 		return
 	}
 
-	data := &AdminPageData{Title: "Zerodrop New", LoggedIn: true, Config: a.Config}
+	claims, _ := a.verify(r)
+	data := &AdminPageData{Title: "Zerodrop Admin :: New", Claims: claims, Config: a.App.Config}
 	loginTmpl := a.Templates.Lookup("new.tmpl")
 	err := loginTmpl.ExecuteTemplate(w, "new", data)
 	if err != nil {
@@ -197,7 +295,8 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 
 // ServeMain serves the entry list.
 func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
-	data := &AdminPageData{Title: "Zerodrop Admin", LoggedIn: true, Config: a.Config}
+	claims, _ := a.verify(r)
+	data := &AdminPageData{Title: "Zerodrop Admin", Claims: claims, Config: a.App.Config}
 
 	if r.Method == "POST" {
 		r.ParseForm()
@@ -206,12 +305,12 @@ func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
 
 		case "train":
 			name := r.FormValue("name")
-			entry, err := a.DB.Get(name)
+			entry, err := a.App.DB.Get(name)
 			if err != nil {
 				log.Println(err)
 			} else {
 				entry.SetTraining(!entry.AccessTrain)
-				if err := a.DB.Update(entry); err != nil {
+				if err := a.App.DB.Update(entry); err != nil {
 					log.Println(err)
 				}
 			}
@@ -219,7 +318,7 @@ func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
 		case "delete":
 			name := r.FormValue("name")
 			if name != "" {
-				err := a.DB.Remove(name)
+				err := a.App.DB.Remove(name)
 				if err != nil {
 					log.Println(err)
 				} else {
@@ -228,7 +327,7 @@ func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
 			}
 
 		case "clear":
-			err := a.DB.Clear()
+			err := a.App.DB.Clear()
 			if err != nil {
 				log.Println(err)
 			} else {
@@ -237,19 +336,15 @@ func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
 
 		}
 
-		http.Redirect(w, r, a.Config.Base+"admin/", 302)
+		http.Redirect(w, r, a.App.Config.Base+"admin/", 302)
 		return
 	}
 
 	var err error
-	data.Entries, err = a.DB.List()
+	data.Entries, err = a.App.DB.List()
 
 	interfaceTmpl := a.Templates.Lookup("main.tmpl")
 	if interfaceTmpl.ExecuteTemplate(w, "main", data) != nil {
 		log.Println(err)
 	}
-}
-
-func (a *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	a.Mux.ServeHTTP(w, r)
 }

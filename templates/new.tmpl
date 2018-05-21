@@ -8,6 +8,9 @@
                 <a class="nav-link active" href="{{$.Config.Base}}admin/new">New</a>
             </li>
         </ul>
+        {{if $.Error}}
+        <div class="alert alert-danger" role="alert">{{$.Error}}</div>
+        {{end}}
         <form id="form-new" enctype="multipart/form-data" method="post">
             <div class="card mb-3 zd_form_source">
                 <div class="card-header">
