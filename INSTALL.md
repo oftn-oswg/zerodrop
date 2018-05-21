@@ -12,6 +12,7 @@ go get github.com/oftn-oswg/zerodrop
 cd $GOPATH/src/oftn-oswg/zerodrop
 
 yarn install # or npm install
+yarn run css # or npm run css
 yarn run dist # or npm run dist
 
 # EDIT config.yml to your liking.

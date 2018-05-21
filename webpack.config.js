@@ -3,7 +3,7 @@ const webpack = require('webpack');
 const uglify = require('uglifyjs-webpack-plugin');
 
 module.exports = {
-    entry: path.join(__dirname, 'typescript/Zerodrop.ts'),
+    entry: path.join(__dirname, 'ts/zerodrop.ts'),
     output: {
         filename: 'zerodrop.js',
         path: path.join(__dirname, 'static')
