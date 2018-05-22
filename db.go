@@ -33,11 +33,13 @@ type ZerodropEntry struct {
 // TODO: Use a persistent backend.
 type ZerodropDB struct {
 	*sql.DB
-	GetStmt    *sql.Stmt
-	ListStmt   *sql.Stmt
-	CreateStmt *sql.Stmt
-	DeleteStmt *sql.Stmt
-	ClearStmt  *sql.Stmt
+	GetStmt         *sql.Stmt
+	ListStmt        *sql.Stmt
+	CreateStmt      *sql.Stmt
+	DeleteStmt      *sql.Stmt
+	ClearStmt       *sql.Stmt
+	AdminDeleteStmt *sql.Stmt
+	AdminClearStmt  *sql.Stmt
 }
 
 // Connect opens a connection to the backend.
@@ -51,6 +53,7 @@ func (d *ZerodropDB) Connect(driver, source string) error {
 
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS entries (
 		name TEXT PRIMARY KEY NOT NULL,
+		token TEXT NOT NULL,
 		creation INTEGER NOT NULL,
 		gob BLOB NOT NULL
 	)`); err != nil {
@@ -67,17 +70,27 @@ func (d *ZerodropDB) Connect(driver, source string) error {
 		return err
 	}
 
-	d.CreateStmt, err = db.Prepare(`REPLACE INTO entries (name, creation, gob) VALUES (?, ?, ?)`)
+	d.CreateStmt, err = db.Prepare(`REPLACE INTO entries (name, token, creation, gob) VALUES (?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
 
-	d.DeleteStmt, err = db.Prepare(`DELETE FROM entries WHERE name = ?`)
+	d.DeleteStmt, err = db.Prepare(`DELETE FROM entries WHERE name = ? AND token = ?`)
 	if err != nil {
 		return err
 	}
 
-	d.ClearStmt, err = db.Prepare(`DELETE FROM entries`)
+	d.AdminDeleteStmt, err = db.Prepare(`DELETE FROM entries WHERE name = ?`)
+	if err != nil {
+		return err
+	}
+
+	d.ClearStmt, err = db.Prepare(`DELETE FROM entries WHERE token = ?`)
+	if err != nil {
+		return err
+	}
+
+	d.AdminClearStmt, err = db.Prepare(`DELETE FROM entries`)
 	if err != nil {
 		return err
 	}
@@ -142,26 +155,45 @@ func (d *ZerodropDB) Update(entry *ZerodropEntry) error {
 	if err := enc.Encode(entry); err != nil {
 		return err
 	}
+	token := ""
 
-	if _, err := d.CreateStmt.Exec(entry.Name, entry.Creation.Unix(), buffer.Bytes()); err != nil {
+	if _, err := d.CreateStmt.Exec(entry.Name, token, entry.Creation.Unix(), buffer.Bytes()); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// Remove removes an entry from the database.
-func (d *ZerodropDB) Remove(name string) error {
-	if _, err := d.DeleteStmt.Exec(name); err != nil {
+// Remove removes an entry from the database with the specified token.
+func (d *ZerodropDB) Remove(name string, token string) error {
+	if _, err := d.DeleteStmt.Exec(name, token); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// Clear resets the database by removing all entries.
-func (d *ZerodropDB) Clear() error {
-	if _, err := d.ClearStmt.Exec(); err != nil {
+// Clear resets the database by removing all entries with the specified token.
+func (d *ZerodropDB) Clear(token string) error {
+	if _, err := d.ClearStmt.Exec(token); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// AdminRemove removes an entry from the database.
+func (d *ZerodropDB) AdminRemove(name string) error {
+	if _, err := d.AdminDeleteStmt.Exec(name); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// AdminClear resets the database by removing all entries.
+func (d *ZerodropDB) AdminClear() error {
+	if _, err := d.AdminClearStmt.Exec(); err != nil {
 		return err
 	}
 

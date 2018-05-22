@@ -11,18 +11,20 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"mime"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 
 	uuid "github.com/satori/go.uuid"
+
+	"github.com/oftn-oswg/secureform"
 )
 
 // AdminHandler serves the administration page, or asks for credentials if not
@@ -47,6 +49,125 @@ type AdminPageData struct {
 	Claims  *AdminClaims
 	Config  *ZerodropConfig
 	Entries []*ZerodropEntry
+}
+
+type AdminFormCredentials struct {
+	Credentials string `form:"credentials"`
+}
+
+type EntrySource int
+
+const (
+	EntrySourceURL EntrySource = iota
+	EntrySourceFile
+	EntrySourceText
+)
+
+func (s *EntrySource) Set(value string) error {
+	switch value {
+	case "url":
+		*s = EntrySourceURL
+	case "file":
+		*s = EntrySourceFile
+	case "text":
+		*s = EntrySourceText
+	default:
+		return errors.New("Source type can be only url, file, or text")
+	}
+	return nil
+}
+
+type RequestURI string
+
+func (u *RequestURI) Set(value string) error {
+	if value != "" {
+		_, err := url.ParseRequestURI(value)
+		if err != nil {
+			return err
+		}
+	}
+
+	*u = RequestURI(value)
+	return nil
+}
+
+type EntryRedirect bool
+
+func (f *EntryRedirect) Set(value string) error {
+	switch value {
+	case "redirect":
+		*f = true
+	case "proxy":
+		*f = false
+	default:
+		return errors.New("Invalid url type")
+	}
+	return nil
+}
+
+type ContentType string
+
+func (f *ContentType) Set(value string) error {
+	if value != "" {
+		_, _, err := mime.ParseMediaType(value)
+		if err != nil {
+			return err
+		}
+	} else {
+		value = "text/plain"
+	}
+	*f = ContentType(value)
+	return nil
+}
+
+type PageAction int
+
+const (
+	PageActionClear PageAction = iota
+	PageActionDelete
+	PageActionTrain
+)
+
+func (s *PageAction) Set(value string) error {
+	switch value {
+	case "clear":
+		*s = PageActionClear
+	case "delete":
+		*s = PageActionDelete
+	case "train":
+		*s = PageActionTrain
+	default:
+		return errors.New("Page action must be clear, delete, or train")
+	}
+	return nil
+}
+
+type AdminFormNewEntry struct {
+	// Publish information
+	Name string `form:"publish?max=512"`
+
+	// Source information
+	Source EntrySource `form:"source"`
+
+	URL      RequestURI    `form:"url"`
+	Redirect EntryRedirect `form:"url_type"`
+
+	File     secureform.File `form:"file"`
+	FileType ContentType     `form:"file_type"`
+
+	Text     string      `form:"text"`
+	TextType ContentType `form:"text_type"`
+
+	// Access information
+	AccessExpire         bool   `form:"access_expire"`
+	AccessExpireCount    uint   `form:"access_expire_count"`
+	AccessBlacklist      string `form:"blacklist"`
+	AccessRedirectOnDeny string `form:"access_redirect_on_deny?max=512"`
+}
+
+type AdminFormPageAction struct {
+	Action PageAction `form:"action"`
+	Name   string     `form:"name?max=512"`
 }
 
 // NewAdminHandler creates a new admin handler with the specified configuration
@@ -111,11 +232,12 @@ func (a *AdminHandler) verify(r *http.Request) (*AdminClaims, error) {
 
 // validate scans the request for credentials and generates a auth token
 func (a *AdminHandler) validate(w http.ResponseWriter, r *http.Request) error {
-	r.ParseForm()
-
-	creds, ok := r.Form["credentials"]
-	if !ok || len(creds) < 1 {
-		return errors.New("No credentials provided")
+	form := AdminFormCredentials{}
+	memory := int64(1 << 10) // 1 kB
+	p := secureform.NewParser(memory, memory, memory)
+	err := p.Parse(w, r, &form)
+	if err != nil {
+		return err
 	}
 
 	validDigestBytes, err := hex.DecodeString(a.App.Config.AuthDigest)
@@ -123,7 +245,7 @@ func (a *AdminHandler) validate(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	digest := sha256.Sum256([]byte(creds[0]))
+	digest := sha256.Sum256([]byte(form.Credentials))
 
 	time.Sleep(2*time.Second + time.Duration(rand.Intn(2000)-1000)*time.Millisecond)
 	if subtle.ConstantTimeCompare(validDigestBytes, digest[:]) == 1 {
@@ -190,7 +312,14 @@ func (a *AdminHandler) ServeLogout(w http.ResponseWriter, r *http.Request) {
 // ServeNew renders the new entry page.
 func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
-		err := r.ParseMultipartForm(int64(a.App.Config.UploadMaxSize))
+		form := AdminFormNewEntry{}
+
+		p := secureform.NewParser(
+			int64(a.App.Config.UploadMaxSize),
+			int64(a.App.Config.UploadMaxSize),
+			0)
+		err := p.Parse(w, r, &form)
+
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -199,7 +328,7 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 		entry := &ZerodropEntry{Creation: time.Now()}
 
 		// Publish information
-		entry.Name = r.FormValue("publish")
+		entry.Name = form.Name
 		if entry.Name == "" {
 			id, err := uuid.NewV4()
 			if err != nil {
@@ -210,13 +339,13 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Source information
-		switch source := r.FormValue("source"); source {
-		case "url":
-			entry.URL = r.FormValue("url")
-			entry.Redirect = r.FormValue("url_type") == "redirect"
+		switch form.Source {
+		case EntrySourceURL:
+			entry.URL = string(form.URL)
+			entry.Redirect = bool(form.Redirect)
 
-		case "file":
-			file, _, err := r.FormFile("file")
+		case EntrySourceFile:
+			file, err := form.File.Open()
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				return
@@ -241,9 +370,9 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 			}
 
 			entry.Filename = filename
-			entry.ContentType = r.FormValue("file_type")
+			entry.ContentType = string(form.FileType)
 
-		case "text":
+		case EntrySourceText:
 			filename := url.PathEscape(entry.Name)
 			fullpath := filepath.Join(a.App.Config.UploadDirectory, filename)
 
@@ -255,25 +384,21 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 			}
 			defer out.Close()
 
-			_, err = io.WriteString(out, r.FormValue("text"))
+			_, err = io.WriteString(out, form.Text)
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				return
 			}
 
 			entry.Filename = filename
-			entry.ContentType = r.FormValue("text_type")
-
-		default:
-			http.Error(w, "Source selection must be url, file, or text", 500)
-			return
+			entry.ContentType = string(form.TextType)
 		}
 
 		// Access information
-		entry.AccessExpire = r.FormValue("access_expire") != ""
-		entry.AccessExpireCount, _ = strconv.Atoi(r.FormValue("access_expire_count"))
-		entry.AccessBlacklist = ParseBlacklist(r.FormValue("blacklist"), a.App.Config.IPCat)
-		entry.AccessRedirectOnDeny = strings.TrimSpace(r.FormValue("access_redirect_on_deny"))
+		entry.AccessExpire = form.AccessExpire
+		entry.AccessExpireCount = int(form.AccessExpireCount)
+		entry.AccessBlacklist = ParseBlacklist(form.AccessBlacklist, a.App.Config.IPCat)
+		entry.AccessRedirectOnDeny = strings.TrimSpace(form.AccessRedirectOnDeny)
 
 		if err := a.App.DB.Update(entry); err != nil {
 			log.Printf("Error creating entry %s: %s", entry.Name, err)
@@ -319,7 +444,7 @@ func (a *AdminHandler) ServeMy(w http.ResponseWriter, r *http.Request) {
 		case "delete":
 			name := r.FormValue("name")
 			if name != "" {
-				err := a.App.DB.Remove(name)
+				err := a.App.DB.AdminRemove(name)
 				if err != nil {
 					log.Println(err)
 				} else {
@@ -328,7 +453,7 @@ func (a *AdminHandler) ServeMy(w http.ResponseWriter, r *http.Request) {
 			}
 
 		case "clear":
-			err := a.App.DB.Clear()
+			err := a.App.DB.AdminClear()
 			if err != nil {
 				log.Println(err)
 			} else {
@@ -356,13 +481,19 @@ func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
 	data := &AdminPageData{Title: "Zerodrop Admin", Claims: claims, Config: a.App.Config}
 
 	if r.Method == "POST" {
-		r.ParseForm()
+		form := AdminFormPageAction{}
+		mem := int64(1 << 10) // 1 kB
+		p := secureform.NewParser(mem, mem, mem)
+		err := p.Parse(w, r, &form)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
 
-		switch r.FormValue("action") {
+		switch form.Action {
 
-		case "train":
-			name := r.FormValue("name")
-			entry, err := a.App.DB.Get(name)
+		case PageActionTrain:
+			entry, err := a.App.DB.Get(form.Name)
 			if err != nil {
 				log.Println(err)
 			} else {
@@ -372,19 +503,18 @@ func (a *AdminHandler) ServeMain(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-		case "delete":
-			name := r.FormValue("name")
-			if name != "" {
-				err := a.App.DB.Remove(name)
+		case PageActionDelete:
+			if form.Name != "" {
+				err := a.App.DB.AdminRemove(form.Name)
 				if err != nil {
 					log.Println(err)
 				} else {
-					log.Printf("Removed entry: %s", name)
+					log.Printf("Removed entry: %s", form.Name)
 				}
 			}
 
-		case "clear":
-			err := a.App.DB.Clear()
+		case PageActionClear:
+			err := a.App.DB.AdminClear()
 			if err != nil {
 				log.Println(err)
 			} else {

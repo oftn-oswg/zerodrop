@@ -2,6 +2,7 @@
 import * as $ from 'jquery';
 import 'bootstrap/js/src/util';
 import 'bootstrap/js/src/tab';
+import 'bootstrap/js/src/dropdown';
 
 function humanFileSize(bytes: number, si: boolean): string {
     const thresh = si ? 1000 : 1024;
