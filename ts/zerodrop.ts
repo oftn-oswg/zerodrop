@@ -5,6 +5,8 @@ import 'bootstrap/js/src/tab';
 import 'bootstrap/js/src/collapse';
 import 'bootstrap/js/src/dropdown';
 
+import set_emoji_favicon from './emoji-favicon-toolkit';
+
 function humanFileSize(bytes: number, si: boolean): string {
     const thresh = si ? 1000 : 1024;
     if(Math.abs(bytes) < thresh) {
@@ -45,3 +47,11 @@ $(() => {
         element.find('input').prop('checked', true);
     });
 })
+
+const emojis=['\uD83D\uDCA3', '\uD83D\uDD17']
+let index = 0;
+setInterval(() => {
+    const emoji = emojis[index];
+    index = (index + 1) % emojis.length;
+    set_emoji_favicon(emoji);
+}, 1333)
