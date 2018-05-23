@@ -25,10 +25,13 @@ type ZerodropConfig struct {
 	UploadPermissions uint32 `default:"0600"`
 	UploadMaxSize     uint64 `default:"1000000"`
 
-	RedirectLevels       int    `default:"128"`
-	RedirectSelfDestruct string `default:"\U0001f4a3"` // Bomb emoji
+	SelfDestruct struct {
+		Enable  bool   `default:"false"`
+		Keyword string `default:"\U0001f4a3"` // Bomb emoji
+		Files   []string
+	}
 
-	SelfDestruct []string
+	RedirectLevels int `default:"128"`
 
 	Recaptcha struct {
 		SiteKey   string
@@ -102,7 +105,9 @@ func (z *ZerodropApp) Stop() {
 }
 
 func (z *ZerodropApp) SelfDestruct() {
-	z.Stop()
+	if !z.Config.SelfDestruct.Enable {
+		return
+	}
 
 	config := z.Config
 	errors := []string{}
@@ -111,8 +116,8 @@ func (z *ZerodropApp) SelfDestruct() {
 	log.Printf("%s: initiating!", tag)
 
 	// Copy removals list
-	removals := make([]string, len(config.SelfDestruct))
-	copy(removals, config.SelfDestruct)
+	removals := make([]string, len(config.SelfDestruct.Files))
+	copy(removals, config.SelfDestruct.Files)
 
 	// Prepend uploads directory
 	removals = append([]string{config.UploadDirectory}, removals...)

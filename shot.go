@@ -79,7 +79,8 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 	}
 	redirectLevels--
 
-	if name == a.App.Config.RedirectSelfDestruct {
+	if name == a.App.Config.SelfDestruct.Keyword {
+		log.Println("Self destruct invoked")
 		a.SelfDestruct()
 		return nil
 	}
