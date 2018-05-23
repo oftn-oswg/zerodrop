@@ -336,6 +336,7 @@ func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request) {
 func (a *AdminHandler) ServeLogout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:    "jwt",
+		Path:    "/",
 		Value:   "",
 		Expires: time.Unix(0, 0),
 	})
