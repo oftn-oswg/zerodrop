@@ -19,6 +19,8 @@ import (
 
 var headerCacheControl = "no-cache, no-store, must-revalidate"
 
+var sudo = &AdminClaims{Admin: true}
+
 // ShotHandler serves the requested page and removes it from the database, or
 // returns 404 page if not available.
 type ShotHandler struct {
@@ -114,7 +116,7 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 			}
 		}
 
-		if err := a.App.DB.Update(entry); err != nil {
+		if err := a.App.DB.Update(entry, sudo); err != nil {
 			log.Printf("Error adding to blacklist: %s", err.Error())
 		}
 		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels, false)
@@ -122,7 +124,7 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 
 	if entry.IsExpired() {
 		entry.AccessBlacklistCount++
-		if err := a.App.DB.Update(entry); err != nil {
+		if err := a.App.DB.Update(entry, sudo); err != nil {
 			log.Println(err)
 		}
 		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels, false)
@@ -130,14 +132,14 @@ func (a *ShotHandler) Access(name string, request *http.Request, redirectLevels 
 
 	if !entry.AccessBlacklist.Allow(a.Context, ip) {
 		entry.AccessBlacklistCount++
-		if err := a.App.DB.Update(entry); err != nil {
+		if err := a.App.DB.Update(entry, sudo); err != nil {
 			log.Println(err)
 		}
 		return a.Access(entry.AccessRedirectOnDeny, request, redirectLevels, false)
 	}
 
 	entry.AccessCount++
-	if err := a.App.DB.Update(entry); err != nil {
+	if err := a.App.DB.Update(entry, sudo); err != nil {
 		log.Println(err)
 	}
 

@@ -4,9 +4,11 @@
     <li class="nav-item">
         <a class="nav-link" href="{{$.Config.Base}}admin/">All Entries</a>
     </li>
+    {{if not $.Claims.Admin}}
     <li class="nav-item">
         <a class="nav-link" href="{{$.Config.Base}}admin/my">My Entries</a>
     </li>
+    {{end}}
     <li class="nav-item">
         <a class="nav-link active" href="{{$.Config.Base}}admin/new">New</a>
     </li>
@@ -15,6 +17,7 @@
 <div class="alert alert-danger" role="alert">{{$.Error}}</div>
 {{end}}
 <form id="form-new" enctype="multipart/form-data" method="post">
+    <input type="hidden" name="token" value="{{$.Claims.Token}}" />
     <div class="card mb-3 zd_form_source">
         <div class="card-header">
             <ul class="nav nav-tabs card-header-tabs">

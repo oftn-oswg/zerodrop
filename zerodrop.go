@@ -77,9 +77,13 @@ func (z *ZerodropApp) Start() error {
 		return err
 	}
 
+	rootserver := http.FileServer(http.Dir("./static/root/"))
+
 	mux := http.NewServeMux()
-	mux.Handle("/admin/", z.AdminHandler)
 	mux.Handle("/", z.ShotHandler)
+	mux.Handle("/admin/", z.AdminHandler)
+	mux.Handle("/robots.txt", rootserver)
+	mux.Handle("/favicon.ico", rootserver)
 
 	z.Server.Handler = mux
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/gob"
+	"errors"
 	"strconv"
 	"time"
 
@@ -11,6 +12,8 @@ import (
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+var ErrNotAuthorized = errors.New("Not authorized")
 
 // ZerodropEntry is a page entry.
 type ZerodropEntry struct {
@@ -33,11 +36,19 @@ type ZerodropEntry struct {
 // TODO: Use a persistent backend.
 type ZerodropDB struct {
 	*sql.DB
-	GetStmt         *sql.Stmt
-	ListStmt        *sql.Stmt
-	CreateStmt      *sql.Stmt
-	DeleteStmt      *sql.Stmt
-	ClearStmt       *sql.Stmt
+
+	// Accessors
+	GetStmt       *sql.Stmt
+	ListStmt      *sql.Stmt
+	ListTokenStmt *sql.Stmt
+
+	// Restricted Mutators
+	UpdateCheckTokenStmt *sql.Stmt
+	DeleteStmt           *sql.Stmt
+	ClearStmt            *sql.Stmt
+
+	// Admin Mutators
+	AdminUpdateStmt *sql.Stmt
 	AdminDeleteStmt *sql.Stmt
 	AdminClearStmt  *sql.Stmt
 }
@@ -60,37 +71,53 @@ func (d *ZerodropDB) Connect(driver, source string) error {
 		return err
 	}
 
-	d.GetStmt, err = db.Prepare(`SELECT gob FROM entries WHERE name = ?`)
+	// Accessors
+	d.GetStmt, err = db.Prepare(
+		`SELECT gob FROM entries WHERE name = ?`)
+	if err != nil {
+		return err
+	}
+	d.ListStmt, err = db.Prepare(
+		`SELECT gob FROM entries ORDER BY creation DESC`)
+	if err != nil {
+		return err
+	}
+	d.ListTokenStmt, err = db.Prepare(
+		`SELECT gob FROM entries WHERE token = ? ORDER BY creation DESC`)
 	if err != nil {
 		return err
 	}
 
-	d.ListStmt, err = db.Prepare(`SELECT gob FROM entries ORDER BY creation DESC`)
+	// Restricted Mutators
+	d.UpdateCheckTokenStmt, err = db.Prepare(
+		`SELECT token FROM entries WHERE name = ?`)
+	if err != nil {
+		return err
+	}
+	d.DeleteStmt, err = db.Prepare(
+		`DELETE FROM entries WHERE name = ? AND token = ?`)
+	if err != nil {
+		return err
+	}
+	d.ClearStmt, err = db.Prepare(
+		`DELETE FROM entries WHERE token = ?`)
 	if err != nil {
 		return err
 	}
 
-	d.CreateStmt, err = db.Prepare(`REPLACE INTO entries (name, token, creation, gob) VALUES (?, ?, ?, ?)`)
+	// Admin Mutators
+	d.AdminUpdateStmt, err = db.Prepare(
+		`REPLACE INTO entries (name, token, creation, gob) VALUES (?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
-
-	d.DeleteStmt, err = db.Prepare(`DELETE FROM entries WHERE name = ? AND token = ?`)
+	d.AdminDeleteStmt, err = db.Prepare(
+		`DELETE FROM entries WHERE name = ?`)
 	if err != nil {
 		return err
 	}
-
-	d.AdminDeleteStmt, err = db.Prepare(`DELETE FROM entries WHERE name = ?`)
-	if err != nil {
-		return err
-	}
-
-	d.ClearStmt, err = db.Prepare(`DELETE FROM entries WHERE token = ?`)
-	if err != nil {
-		return err
-	}
-
-	d.AdminClearStmt, err = db.Prepare(`DELETE FROM entries`)
+	d.AdminClearStmt, err = db.Prepare(
+		`DELETE FROM entries`)
 	if err != nil {
 		return err
 	}
@@ -117,10 +144,17 @@ func (d *ZerodropDB) Get(name string) (*ZerodropEntry, error) {
 
 // List returns a slice of all entries sorted by creation time,
 // with the most recent first.
-func (d *ZerodropDB) List() ([]*ZerodropEntry, error) {
+func (d *ZerodropDB) List(token string) ([]*ZerodropEntry, error) {
 	list := []*ZerodropEntry{}
 
-	rows, err := d.ListStmt.Query()
+	var err error
+	var rows *sql.Rows
+
+	if token == "" {
+		rows, err = d.ListStmt.Query()
+	} else {
+		rows, err = d.ListTokenStmt.Query(token)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -149,15 +183,25 @@ func (d *ZerodropDB) List() ([]*ZerodropEntry, error) {
 }
 
 // Update adds an entry to the database.
-func (d *ZerodropDB) Update(entry *ZerodropEntry) error {
+func (d *ZerodropDB) Update(entry *ZerodropEntry, claims *AdminClaims) error {
+	if !claims.Admin {
+		// Validate token if exists
+		var token string
+		err := d.UpdateCheckTokenStmt.QueryRow(entry.Name).Scan(&token)
+		if err == nil {
+			if token != claims.Token {
+				return ErrNotAuthorized
+			}
+		}
+	}
+
 	var buffer bytes.Buffer
 	enc := gob.NewEncoder(&buffer)
 	if err := enc.Encode(entry); err != nil {
 		return err
 	}
-	token := ""
 
-	if _, err := d.CreateStmt.Exec(entry.Name, token, entry.Creation.Unix(), buffer.Bytes()); err != nil {
+	if _, err := d.AdminUpdateStmt.Exec(entry.Name, claims.Token, entry.Creation.Unix(), buffer.Bytes()); err != nil {
 		return err
 	}
 
@@ -165,8 +209,15 @@ func (d *ZerodropDB) Update(entry *ZerodropEntry) error {
 }
 
 // Remove removes an entry from the database with the specified token.
-func (d *ZerodropDB) Remove(name string, token string) error {
-	if _, err := d.DeleteStmt.Exec(name, token); err != nil {
+func (d *ZerodropDB) Remove(name string, claims *AdminClaims) error {
+	if claims.Admin {
+		if _, err := d.AdminDeleteStmt.Exec(name); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if _, err := d.DeleteStmt.Exec(name, claims.Token); err != nil {
 		return err
 	}
 
@@ -174,26 +225,16 @@ func (d *ZerodropDB) Remove(name string, token string) error {
 }
 
 // Clear resets the database by removing all entries with the specified token.
-func (d *ZerodropDB) Clear(token string) error {
-	if _, err := d.ClearStmt.Exec(token); err != nil {
-		return err
+func (d *ZerodropDB) Clear(claims *AdminClaims) error {
+	if claims.Admin {
+		if _, err := d.AdminClearStmt.Exec(); err != nil {
+			return err
+		}
+
+		return nil
 	}
 
-	return nil
-}
-
-// AdminRemove removes an entry from the database.
-func (d *ZerodropDB) AdminRemove(name string) error {
-	if _, err := d.AdminDeleteStmt.Exec(name); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// AdminClear resets the database by removing all entries.
-func (d *ZerodropDB) AdminClear() error {
-	if _, err := d.AdminClearStmt.Exec(); err != nil {
+	if _, err := d.ClearStmt.Exec(claims.Token); err != nil {
 		return err
 	}
 
@@ -216,15 +257,5 @@ func (e *ZerodropEntry) Access() {
 }
 
 func (e *ZerodropEntry) String() string {
-	urltype := "proxy"
-	if e.Redirect {
-		urltype = "redirect"
-	}
-	access := strconv.Itoa(e.AccessCount)
-	if e.AccessExpire {
-		access += "/" + strconv.Itoa(e.AccessExpireCount)
-	}
-	return strconv.Quote(e.Name) + " {" +
-		e.URL + " (" + urltype + ") " +
-		access + " " + e.AccessBlacklist.String() + "}"
+	return strconv.Quote(e.Name)
 }

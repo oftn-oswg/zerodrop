@@ -4,9 +4,11 @@
     <li class="nav-item">
         <a class="nav-link{{if $.All}} active{{end}}" href="{{$.Config.Base}}admin/">All Entries</a>
     </li>
+    {{if not $.Claims.Admin}}
     <li class="nav-item">
         <a class="nav-link{{if not $.All}} active{{end}}" href="{{$.Config.Base}}admin/my">My Entries</a>
     </li>
+    {{end}}
     <li class="nav-item">
         <a class="nav-link" href="{{$.Config.Base}}admin/new">New</a>
     </li>
@@ -21,12 +23,14 @@
         <li class="list-group-item{{if .AccessTrain}} list-group-item-warning{{end}}">
             <form method="post">
                 <input type="hidden" name="name" value="{{.Name}}"/>
+                <input type="hidden" name="token" value="{{$.Claims.Token}}" />
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-1 flex-grow-1">
                         <a href="{{$.Config.Base}}{{.Name}}">{{.Name}}</a>
                     </h5>
                     <span title="Access attempts" class="badge badge-{{if and .AccessExpire (ge .AccessCount .AccessExpireCount)}}danger{{else}}secondary{{end}} badge-pill mr-3">{{.AccessCount}}{{if .AccessExpire}}/{{.AccessExpireCount}}{{end}}</span>
                     {{if gt .AccessBlacklistCount 0}}<span title="Blacklisted requests" class="badge badge-warning badge-pill mr-3">{{.AccessBlacklistCount}}</span>{{end}}
+                    {{if or $.Claims.Admin (not $.All) }}
                     <div class="btn-group" role="group">
                         <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             Actions
@@ -39,6 +43,7 @@
                             <button type="submit" name="action" value="delete" class="dropdown-item">Delete</a>
                         </div>
                     </div>
+                    {{end}}
                 </div>
                 {{if ne .URL "" }}
                 <p class="mb-1">
@@ -61,11 +66,14 @@
     </div>
     {{end}}
 
+    {{if and $.Entries (or $.Claims.Admin (not $.All)) }}
     <div class="card-footer">
         <form method="post">
             <input type="hidden" name="action" value="clear" />
+            <input type="hidden" name="token" value="{{$.Claims.Token}}" />
             <button type="submit" class="btn btn-danger float-right">Clear all entries</button>
         </form>
     </div>
+    {{end}}
 </div>
 {{end}}
