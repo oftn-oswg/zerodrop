@@ -184,15 +184,15 @@ func (d *ZerodropDB) List(token string) ([]*ZerodropEntry, error) {
 
 // Update adds an entry to the database.
 func (d *ZerodropDB) Update(entry *ZerodropEntry, claims *AdminClaims) error {
-	if !claims.Admin {
-		// Validate token if exists
-		var token string
-		err := d.UpdateCheckTokenStmt.QueryRow(entry.Name).Scan(&token)
-		if err == nil {
-			if token != claims.Token {
-				return ErrNotAuthorized
-			}
-		}
+	var token string
+
+	err := d.UpdateCheckTokenStmt.QueryRow(entry.Name).Scan(&token)
+	if err != nil {
+		// The entry does not exist.
+		token = claims.Token
+	} else if !claims.Admin && token != claims.Token {
+		// The entry exists and the tokens do not match.
+		return ErrNotAuthorized
 	}
 
 	var buffer bytes.Buffer
@@ -201,7 +201,7 @@ func (d *ZerodropDB) Update(entry *ZerodropEntry, claims *AdminClaims) error {
 		return err
 	}
 
-	if _, err := d.AdminUpdateStmt.Exec(entry.Name, claims.Token, entry.Creation.Unix(), buffer.Bytes()); err != nil {
+	if _, err := d.AdminUpdateStmt.Exec(entry.Name, token, entry.Creation.Unix(), buffer.Bytes()); err != nil {
 		return err
 	}
 
