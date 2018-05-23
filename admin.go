@@ -213,8 +213,7 @@ func NewAdminHandler(app *ZerodropApp) (*AdminHandler, error) {
 	handler.HandleFunc("/admin/login", handler.ServeLogin)
 	handler.HandleFunc("/admin/logout", handler.ServeLogout)
 	handler.HandleFunc("/admin/new", handler.ServeNew)
-	handler.HandleFunc("/admin/my", handler.ServeList)
-	handler.HandleFunc("/admin/", handler.ServeList)
+	handler.HandleFunc("/", handler.ServeList)
 
 	return handler, nil
 }
@@ -299,6 +298,7 @@ func (a *AdminHandler) setClaims(w http.ResponseWriter, claims *AdminClaims) err
 	http.SetCookie(w, &http.Cookie{
 		Name:    "jwt",
 		Value:   tokenString,
+		Path:    "/",
 		Expires: time.Now().Add(365 * 24 * time.Hour), // 1 year
 	})
 
@@ -319,7 +319,7 @@ func (a *AdminHandler) ServeLogin(w http.ResponseWriter, r *http.Request) {
 
 		// Successful authentication
 		log.Printf("Successful authentication by %s", ip)
-		http.Redirect(w, r, "/admin/", 302)
+		http.Redirect(w, r, "/", 302)
 		return
 	}
 
@@ -339,7 +339,7 @@ func (a *AdminHandler) ServeLogout(w http.ResponseWriter, r *http.Request) {
 		Value:   "",
 		Expires: time.Unix(0, 0),
 	})
-	http.Redirect(w, r, "/admin/", 302)
+	http.Redirect(w, r, "/", 302)
 }
 
 // ServeNew renders the new entry page.
@@ -462,7 +462,7 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 
 		redirectPage := a.App.Config.Base + "admin/my"
 		if claims.Admin {
-			redirectPage = a.App.Config.Base + "admin/"
+			redirectPage = a.App.Config.Base
 		}
 		http.Redirect(w, r, redirectPage, 302)
 		return

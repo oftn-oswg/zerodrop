@@ -152,7 +152,7 @@ func (a *ShotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Get entry
 	name := strings.Trim(r.URL.Path, "/")
 	if name == "" {
-		http.Redirect(w, r, "/admin/", 308)
+		a.App.AdminHandler.ServeHTTP(w, r)
 		return
 	}
 
