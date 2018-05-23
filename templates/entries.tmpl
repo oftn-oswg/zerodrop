@@ -28,7 +28,7 @@
                     <h5 class="mb-1 flex-grow-1">
                         <a href="{{$.Config.Base}}{{.Name}}">{{.Name}}</a>
                     </h5>
-                    <span title="Access attempts" class="badge badge-{{if and .AccessExpire (ge .AccessCount .AccessExpireCount)}}danger{{else}}secondary{{end}} badge-pill mr-3">{{.AccessCount}}{{if .AccessExpire}}/{{.AccessExpireCount}}{{end}}</span>
+                    <span title="Successful requests" class="badge badge-{{if and .AccessExpire (ge .AccessCount .AccessExpireCount)}}danger{{else}}secondary{{end}} badge-pill mr-3">{{.AccessCount}}{{if .AccessExpire}}/{{.AccessExpireCount}}{{end}}</span>
                     {{if gt .AccessBlacklistCount 0}}<span title="Blacklisted requests" class="badge badge-warning badge-pill mr-3">{{.AccessBlacklistCount}}</span>{{end}}
                     {{if or $.Claims.Admin (not $.All) }}
                     <div class="dropdown">
