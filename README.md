@@ -4,7 +4,7 @@ A utility for private redirects and proxies that disappear after certain conditi
 
 ## Live demo
 
-A live demo is available at [dangerous.link](https://dangerous.link).
+A live demo is available at this [dangerous.link](https://dangerous.link).
 
 ## Features
 
