@@ -30,6 +30,11 @@ type ZerodropConfig struct {
 
 	SelfDestruct []string
 
+	Recaptcha struct {
+		SiteKey   string
+		SecretKey string
+	}
+
 	DB struct {
 		Driver string `default:"sqlite3"`
 		Source string `default:"zerodrop.db"`

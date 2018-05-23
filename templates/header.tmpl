@@ -7,6 +7,9 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>{{$.Title}}</title>
     <link rel="stylesheet" href="{{$.Config.Base}}admin/static/zerodrop.css" type="text/css" />
+    {{if $.Config.Recaptcha.SiteKey}}
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    {{end}}
 </head>
 
 <body>

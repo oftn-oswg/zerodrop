@@ -26,6 +26,8 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/oftn-oswg/secureform"
+
+	"gopkg.in/ezzarghili/recaptcha-go.v2"
 )
 
 // AdminHandler serves the administration page, or asks for credentials if not
@@ -168,6 +170,9 @@ type AdminFormNewEntry struct {
 	AccessExpireCount    uint   `form:"access_expire_count"`
 	AccessBlacklist      string `form:"blacklist"`
 	AccessRedirectOnDeny string `form:"access_redirect_on_deny?max=512"`
+
+	// ReCaptcha
+	ReCaptchaResponse string `form:"g-recaptcha-response"`
 }
 
 type AdminFormPageAction struct {
@@ -353,6 +358,25 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
+		}
+
+		// Test ReCaptcha
+		if a.App.Config.Recaptcha.SiteKey != "" {
+			captcha, err := recaptcha.NewReCAPTCHA(a.App.Config.Recaptcha.SecretKey)
+			if err != nil {
+				log.Println(err)
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			ok, err := captcha.Verify(form.ReCaptchaResponse, RealRemoteIP(r).String())
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			if !ok {
+				http.Error(w, "You might be a robot. Rust in peace.", 500)
+				return
+			}
 		}
 
 		entry := &ZerodropEntry{Creation: time.Now()}

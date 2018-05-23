@@ -132,6 +132,9 @@
     </div>
     <div class="card mb-3 zd_form_publish">
         <div class="card-body">
+            {{if $.Config.Recaptcha.SiteKey}}
+            <div class="g-recaptcha mb-3" data-sitekey="{{$.Config.Recaptcha.SiteKey}}"></div>
+            {{end}}
             <div class="form-group row">
                 <div class="input-group col-sm-10">
                     <div class="input-group-prepend">
