@@ -82,7 +82,7 @@ export default function set_emoji_favicon(emoji: any, cacheWithServiceWorker?: a
 
 // Canvas setup
 canvas.width = canvas.height = size;
-context.font = `normal normal normal ${size}px/${size}px sans-serif`;
+context.font = `normal normal normal ${size}px/${size}px apple color emoji, segoe ui emoji, notocoloremoji, segoe ui symbol, android emoji, emojisymbols, emojione mozilla, sans-serif`;
 context.textAlign = 'center';
 context.textBaseline = 'middle';
 

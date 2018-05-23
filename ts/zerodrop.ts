@@ -9,18 +9,18 @@ import set_emoji_favicon from './emoji-favicon-toolkit';
 
 function humanFileSize(bytes: number, si: boolean): string {
     const thresh = si ? 1000 : 1024;
-    if(Math.abs(bytes) < thresh) {
+    if (Math.abs(bytes) < thresh) {
         return bytes + ' B';
     }
     const units = si
-        ? ['KB','MB','GB','TB','PB','EB','ZB','YB']
-        : ['KiB','MiB','GiB','TiB','PiB','EiB','ZiB','YiB'];
+        ? ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+        : ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
     let u = -1;
     do {
         bytes /= thresh;
         ++u;
-    } while(Math.abs(bytes) >= thresh && u < units.length - 1);
-    return bytes.toFixed(1)+' '+units[u];
+    } while (Math.abs(bytes) >= thresh && u < units.length - 1);
+    return bytes.toFixed(1) + ' ' + units[u];
 }
 
 $(() => {
@@ -32,7 +32,7 @@ $(() => {
             return v.toString(16);
         }));
     });
-    
+
     // Custom file upload input
     $('.zerodrop-file').change((event: JQuery.Event) => {
         const element = $(event.currentTarget);
@@ -40,18 +40,20 @@ $(() => {
         $(element.data('name')).text(`${file.name} (${humanFileSize(file.size, true)})`);
         $(element.data('mime')).val(file.type);
     });
-    
+
     // New entry tabs
     $('.zerodrop-nav').click((event: JQuery.Event) => {
         const element = $(event.currentTarget);
         element.find('input').prop('checked', true);
     });
-})
+});
 
-const emojis=['\uD83D\uDCA3', '\uD83D\uDD17']
+const emojis = ['\u26a0\ufe0f', '\uD83D\uDD17']
 let index = 0;
-setInterval(() => {
+function update_emoji() {
     const emoji = emojis[index];
     index = (index + 1) % emojis.length;
     set_emoji_favicon(emoji);
-}, 1333)
+}
+update_emoji();
+setInterval(update_emoji, 1337)
