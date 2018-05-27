@@ -1,41 +1,49 @@
 # Unix or TCP socket to listen for web requests
 listen: 8080
-
 # Group of the Unix socket
 group: www-data
 
 # Root of the publicly facing web server to prepend links
 base: /
-
 # A secret used to sign authorization tokens
 authsecret: "ggVUtPQdIL3kuMSeHQgn7PW9nv3XuJBp"
-
 # The SHA-256 hash of the password to gain admin access
 authdigest: 11a55ac5de2beb9146e01386dd978a13bb9b99388f5eb52e37f69a32e3d5f11e
 
 # The MaxMind GeoDB used for geofencing
 geodb: GeoLite2-City.mmdb
-
 # The databases to include for categorical blacklisting
 ipcat:
     datacenters: ../ipcat/datacenters.csv
     tor: ../ipcat/tor.csv
 
+# The directory to upload files to
+uploaddirectory: ./uploads/
+# The permissions to set for file uploads
+uploadpermissions: 0600
+# The maximum form and file upload size in bytes
+uploadmaxsize: 1000000
+
+# Boolean value inidicating whether everyone has can manage their own entries
+public: false
+
+selfdestruct:
+    # Whether to allow self-destruct
+    enable: false
+    # Entry name to use to initiate a self-destruct
+    keyword: \U0001f4a3
+    # Besides the uploads directory and binary,
+    # The list of files to delete upon self-destruct
+    files: []
+
 # The number of levels of internal redirects to allow for the Redirect On Deny
 # feature. This is to prevent infinite loops.
 redirectlevels: 128
 
-# The directory to upload files to
-uploaddirectory: ./uploads/
-
-# The permissions to set for file uploads
-uploadpermissions: 0600
-
-# The maximum form and file upload size in bytes
-uploadmaxsize: 1000000
-
-selfdestruct:
-    enable: true
+recaptcha:
+    # Set to the fields provided by reCAPTCHA v2 "I am not a robot" widget
+    sitekey: ""
+    secretkey: ""
 
 # Database connection information
 db:

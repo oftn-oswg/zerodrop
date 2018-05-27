@@ -25,6 +25,8 @@ type ZerodropConfig struct {
 	UploadPermissions uint32 `default:"0600"`
 	UploadMaxSize     uint64 `default:"1000000"`
 
+	Public bool `default:"false"`
+
 	SelfDestruct struct {
 		Enable  bool   `default:"false"`
 		Keyword string `default:"\U0001f4a3"` // Bomb emoji

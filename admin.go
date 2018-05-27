@@ -347,6 +347,14 @@ func (a *AdminHandler) ServeLogout(w http.ResponseWriter, r *http.Request) {
 func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 	claims, _ := a.verify(w, r)
 
+	if !a.App.Config.Public && !claims.Admin {
+		// We are not a public instance
+		// and the user is not logged in.
+
+		http.Redirect(w, r, "/admin/login", 302)
+		return
+	}
+
 	if r.Method == "POST" {
 		form := AdminFormNewEntry{}
 
@@ -480,6 +488,15 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 // ServeList serves the entry list.
 func (a *AdminHandler) ServeList(w http.ResponseWriter, r *http.Request) {
 	claims, _ := a.verify(w, r)
+
+	if !a.App.Config.Public && !claims.Admin {
+		// We are not a public instance
+		// and the user is not logged in.
+
+		http.Redirect(w, r, "/admin/login", 302)
+		return
+	}
+
 	data := &AdminPageData{Title: "Zerodrop Admin", Claims: claims, Config: a.App.Config}
 
 	all := true
