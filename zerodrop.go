@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 
 	"github.com/oftn-oswg/socket"
 )
@@ -25,7 +27,9 @@ type ZerodropConfig struct {
 	UploadPermissions uint32 `default:"0600"`
 	UploadMaxSize     uint64 `default:"1000000"`
 
-	Public bool `default:"false"`
+	Public         bool   `default:"false"`
+	Disallow       string `default:""`
+	disallowRegexp *regexp.Regexp
 
 	SelfDestruct struct {
 		Enable  bool   `default:"false"`
@@ -61,6 +65,14 @@ func NewZerodropApp(config *ZerodropConfig) (app *ZerodropApp, err error) {
 		Config: config,
 		Server: &http.Server{},
 		DB:     &ZerodropDB{},
+	}
+
+	if config.Disallow != "" {
+		disallowRegexp, err := regexp.Compile(config.Disallow)
+		if err != nil {
+			return nil, fmt.Errorf("parsing Disallow field: %s", err)
+		}
+		config.disallowRegexp = disallowRegexp
 	}
 
 	app.AdminHandler, err = NewAdminHandler(app)

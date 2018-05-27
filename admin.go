@@ -401,6 +401,14 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 			entry.Name = id.String()
 		}
 
+		if a.App.Config.disallowRegexp != nil {
+			// Check entry name against Disallow configuration
+			if a.App.Config.disallowRegexp.MatchString(entry.Name) {
+				http.Error(w, "Entry name has been disallowed", 500)
+				return
+			}
+		}
+
 		// Source information
 		switch form.Source {
 		case EntrySourceURL:
@@ -466,7 +474,7 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 		if err := a.App.DB.Update(entry, claims); err != nil {
 			log.Printf("Error creating entry %s: %s", entry.Name, err)
 		} else {
-			log.Printf("Created entry %s", entry)
+			log.Printf("Created entry %s with %s", entry, RealRemoteIP(r))
 		}
 
 		redirectPage := a.App.Config.Base + "admin/my"
@@ -533,7 +541,7 @@ func (a *AdminHandler) ServeList(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					log.Println(err)
 				} else {
-					log.Printf("Removed entry: %s", form.Name)
+					log.Printf("Removed entry %q with IP %s", form.Name, RealRemoteIP(r))
 				}
 			}
 
@@ -542,7 +550,7 @@ func (a *AdminHandler) ServeList(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				log.Println(err)
 			} else {
-				log.Printf("Cleared all entries with token %q", form.Token)
+				log.Printf("Cleared all entries with token %q from %s", form.Token, RealRemoteIP(r))
 			}
 
 		}

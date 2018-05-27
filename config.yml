@@ -26,6 +26,8 @@ uploadmaxsize: 1000000
 
 # Boolean value inidicating whether everyone has can manage their own entries
 public: false
+# Regular expression to match entry name against to disallow
+disallow: ^(admin|.well-known|sitemap.xml)
 
 selfdestruct:
     # Whether to allow self-destruct
