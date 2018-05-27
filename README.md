@@ -1,6 +1,10 @@
 # Zerodrop 🕵️
 
-A utility for private redirects and proxies that disappear after being used once. 
+A utility for private redirects and proxies that disappear after certain conditions are met.
+
+## Live demo
+
+A live demo is available at this [dangerous.link](https://dangerous.link).
 
 ## Features
 
