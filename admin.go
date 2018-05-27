@@ -351,7 +351,7 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 		// We are not a public instance
 		// and the user is not logged in.
 
-		http.Redirect(w, r, "/admin/login", 302)
+		http.Redirect(w, r, a.App.Config.Base+"admin/login", 302)
 		return
 	}
 
@@ -493,7 +493,7 @@ func (a *AdminHandler) ServeList(w http.ResponseWriter, r *http.Request) {
 		// We are not a public instance
 		// and the user is not logged in.
 
-		http.Redirect(w, r, "/admin/login", 302)
+		http.Redirect(w, r, a.App.Config.Base+"admin/login", 302)
 		return
 	}
 
