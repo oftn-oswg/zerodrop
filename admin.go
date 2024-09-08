@@ -393,11 +393,7 @@ func (a *AdminHandler) ServeNew(w http.ResponseWriter, r *http.Request) {
 		// Publish information
 		entry.Name = form.Name
 		if entry.Name == "" {
-			id, err := uuid.NewV4()
-			if err != nil {
-				http.Error(w, err.Error(), 500)
-				return
-			}
+			id := uuid.NewV4()
 			entry.Name = id.String()
 		}
 
