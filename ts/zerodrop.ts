@@ -1,9 +1,12 @@
 // Import page dependencies
 import * as $ from 'jquery';
+import 'jquery-ui/ui/widgets/sortable';
 import 'bootstrap/js/src/util';
 import 'bootstrap/js/src/tab';
 import 'bootstrap/js/src/collapse';
 import 'bootstrap/js/src/dropdown';
+
+import * as L from 'leaflet';
 
 import set_emoji_favicon from './emoji-favicon-toolkit';
 
@@ -46,6 +49,23 @@ $(() => {
         const element = $(event.currentTarget);
         element.find('input').prop('checked', true);
     });
+
+    ($('.zerodrop-blacklist-items') as any).sortable({
+        handle: '.card-header'
+    });
+
+    const map = $('.zerodrop-map').get(0);
+    const leaflet = L.map(map, {
+        center: [51.505, -0.09],
+        zoom: 2
+    });
+
+    L.tileLayer('https://api.mapbox.com/styles/v1/dsamarin/cjhod9wkf003m2souy4fltiou/tiles/256/{z}/{x}/{y}?access_token={accessToken}', {
+        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+        maxZoom: 18,
+        accessToken: 'pk.eyJ1IjoiZHNhbWFyaW4iLCJhIjoiY2pob2Q4cDF6MTNlZDNkcnltb2trNnpwbCJ9.UUx6bmFfKjYV2w1x61q9nw'
+    }).addTo(leaflet);
+
 });
 
 const emojis = ['\u26a0\ufe0f', '\uD83D\uDD17']
